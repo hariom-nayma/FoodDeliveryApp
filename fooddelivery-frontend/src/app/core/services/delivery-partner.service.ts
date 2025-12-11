@@ -57,6 +57,10 @@ export class DeliveryPartnerService {
     return this.http.get(`${this.ordersUrl}/history`);
   }
 
+  getActiveOrders(): Observable<any> {
+    return this.http.get(`${this.ordersUrl}/active`);
+  }
+
   getDailyEarnings(): Observable<any> {
     return this.http.get(`${this.ordersUrl}/earnings/daily`);
   }

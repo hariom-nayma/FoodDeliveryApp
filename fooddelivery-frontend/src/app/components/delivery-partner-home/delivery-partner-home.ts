@@ -36,12 +36,19 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
       if (this.isOnline()) {
         this.startBackgroundTasks();
       }
+      this.checkForActiveOrders();
     });
+  }
 
-    // Also check for any active order that might be in progress (Not implemented in backend strictly, but good practice)
-    // For now, we rely on accepting a request to set currentOrder locally or fetch from "My Assignments" endpoint if existed.
-    // I will simplify: If 'active' tab is clicked, fetch assignments. 
-    // Actually, `activeTab` logic will fetch data.
+  checkForActiveOrders() {
+    this.deliveryService.getActiveOrders().subscribe(res => {
+      if (res.data && res.data.length > 0) {
+        const active = res.data[0];
+        this.currentOrder.set(active);
+        this.activeTab.set('active');
+        this.message.set('Resumed active order 📦');
+      }
+    });
   }
 
   toggleStatus() {

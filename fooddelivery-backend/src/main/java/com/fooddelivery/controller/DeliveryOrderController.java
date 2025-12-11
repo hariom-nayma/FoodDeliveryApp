@@ -52,7 +52,8 @@ public class DeliveryOrderController {
         // deliveryPartner = null
 
         List<Order> orders = orderRepository.findAll().stream()
-                .filter(o -> (o.getStatus() == OrderStatus.READY_FOR_PICKUP || o.getStatus() == OrderStatus.COOKING) && o.getDeliveryPartner() == null)
+                .filter(o -> (o.getStatus() == OrderStatus.READY_FOR_PICKUP || o.getStatus() == OrderStatus.COOKING)
+                        && o.getDeliveryPartner() == null)
                 .collect(Collectors.toList());
 
         List<Map<String, Object>> response = orders.stream().map(order -> {
@@ -157,15 +158,50 @@ public class DeliveryOrderController {
         return ResponseEntity.ok(ApiResponse.success("Order history fetched", res));
     }
 
-    @GetMapping("/earnings/daily")
+    @GetMapping("/active")
     @PreAuthorize("hasRole('DELIVERY_PARTNER')")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getDailyEarnings(
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getActiveOrders(
             @AuthenticationPrincipal UserDetails userDetails) {
-        Map<String, Object> data = new HashMap<>();
-        data.put("date", java.time.LocalDate.now());
-        data.put("ordersCompleted", 5); // Mock
-        data.put("totalEarnings", 175);
-        data.put("incentives", 20);
-        return ResponseEntity.ok(ApiResponse.success("Daily earnings fetched", data));
+        String userId = getUserId(userDetails);
+        var partner = deliveryPartnerRepository.findByUserId(userId).orElseThrow();
+
+        List<Order> orders = orderRepository.findAll().stream()
+                .filter(o -> o.getDeliveryPartner() != null
+                        && o.getDeliveryPartner().getId().equals(partner.getId())
+                        && (o.getStatus() == OrderStatus.ASSIGNED_TO_RIDER || o.getStatus() == OrderStatus.PICKED_UP))
+                .collect(Collectors.toList());
+
+        List<Map<String, Object>> response = orders.stream().map(order -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("orderId", order.getId());
+            map.put("restaurantName", order.getRestaurant().getName());
+            map.put("status", order.getStatus());
+            map.put("customerName", order.getUser().getName());
+            map.put("customerPhone", order.getUser().getPhone());
+
+            // Locations
+            try {
+                if (order.getRestaurant().getAddress() != null) {
+                    map.put("pickupLocation", Map.of(
+                            "lat", order.getRestaurant().getAddress().getLatitude(),
+                            "lng", order.getRestaurant().getAddress().getLongitude(),
+                            "address", order.getRestaurant().getAddress().getState() + ", "
+                                    + order.getRestaurant().getAddress().getCity()));
+                }
+
+                // Delivery Location Parsing (Basic)
+                String deliveryAddrJson = order.getDeliveryAddressJson();
+                if (deliveryAddrJson != null && deliveryAddrJson.contains("latitude")) {
+                    map.put("dropLocation", Map.of("raw", deliveryAddrJson)); // Frontend can parse or we can reuse
+                                                                              // Service logic
+                }
+            } catch (Exception e) {
+            }
+
+            map.put("earnings", 35);
+            return map;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(ApiResponse.success("Active orders fetched", response));
     }
 }
