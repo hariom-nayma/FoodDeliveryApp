@@ -1,0 +1,130 @@
+<div class="container">
+  @if (loading()) {
+    <p>Loading dashboard...</p>
+  } @else if (error()) {
+    <div class="card error">{{ error() }}</div>
+  } @else if (restaurant()) {
+    <div class="header">
+      <h1>{{ restaurant()?.name }}</h1>
+      <span class="status-badge" [ngClass]="'status-' + restaurant()?.status">
+        {{ restaurant()?.status }}
+      </span>
+    </div>
+
+    <div class="card">
+        <h3>Onboarding Progress</h3>
+        <p>Current Status: <strong>{{ restaurant()?.status }}</strong></p>
+        
+        @if (restaurant()?.status === RestaurantStatus.DRAFT) {
+            <p>Your restaurant is currently in Draft mode. Please complete the following steps:</p>
+            <ul>
+                <li>Basic Details: ✅ Completed</li>
+                <li>Documents: {{ restaurant()?.gstNumber ? '✅ Uploaded' : '❌ Pending' }}</li>
+            </ul>
+
+            <div class="actions">
+                @if (!restaurant()?.gstNumber) {
+                    <a [routerLink]="['/restaurant', restaurant()?.id, 'documents']" class="btn-primary" style="text-decoration:none; display:inline-block; padding: 0.75rem 1.5rem; border-radius: 4px;">Upload Documents</a>
+                } @else {
+                    <button class="btn-primary" (click)="submitForReview()">Submit for Review</button>
+                    <a [routerLink]="['/restaurant', restaurant()?.id, 'documents']" class="btn-outline" style="text-decoration:none; display:inline-block; padding: 0.75rem 1.5rem; border-radius: 4px;">Update Documents</a>
+                }
+            </div>
+        } 
+        
+        @if (restaurant()?.status === RestaurantStatus.PENDING_REVIEW) {
+            <p>Your application is under review by our admin team. You will be notified once approved.</p>
+        }
+
+        @if (restaurant()?.status === RestaurantStatus.APPROVED) {
+            <p>Congratulations! You are approved.</p>
+            <!-- Add Open/Close toggle here later -->
+        }
+        
+        @if (restaurant()?.status === RestaurantStatus.REJECTED) {
+            <p style="color:red">Your application was rejected. Please contact support or update details.</p>
+        }
+    </div>
+
+    <div class="card">
+        <h3>Restaurant Details</h3>
+        <p><strong>Cuisines:</strong> {{ restaurant()?.cuisineTypes?.join(', ') }}</p>
+        <p><strong>Timing:</strong> {{ restaurant()?.openingTime }} - {{ restaurant()?.closingTime }}</p>
+        <p><strong>Address:</strong> {{ restaurant()?.address?.addressLine1 }}, {{ restaurant()?.address?.city }}</p>
+    </div>
+
+    <!-- Menu Management Section -->
+    @if (restaurant()?.status === RestaurantStatus.APPROVED || restaurant()?.status === RestaurantStatus.ACTIVE) {
+      <div class="card">
+        <h3>Live Orders</h3>
+        @if (orders().length > 0) {
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #eee; text-align: left;">
+                            <th style="padding: 10px;">Order ID</th>
+                            <th style="padding: 10px;">Items</th>
+                            <th style="padding: 10px;">Total</th>
+                            <th style="padding: 10px;">Status</th>
+                            <th style="padding: 10px;">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (order of orders(); track order.id) {
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 10px;">#{{ order.id.slice(0, 8) }}</td>
+                                <td style="padding: 10px;">
+                                    <div *ngFor="let item of order.items">
+                                        {{ item.quantity }}x {{ item.name }}
+                                    </div>
+                                </td>
+                                <td style="padding: 10px;">₹{{ order.totalAmount }}</td>
+                                <td style="padding: 10px;">
+                                    <span class="status-badge" [ngClass]="'status-' + order.orderStatus">
+                                        {{ order.orderStatus }}
+                                    </span>
+                                </td>
+                                <td style="padding: 10px;">{{ order.createdAt | date:'shortTime' }}</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        } @else {
+            <p>No active orders.</p>
+        }
+      </div>
+
+      <div class="card">
+        <h3>Menu Management</h3>
+        <p>Manage your restaurant's menu items, categories, and options.</p>
+        
+        <div class="menu-grid">
+          <div class="menu-card">
+            <h4>📁 Categories</h4>
+            <p>Organize items into categories</p>
+            <button class="btn-primary" style="width: 100%; margin-top: 1rem;">Manage Categories</button>
+          </div>
+
+          <div class="menu-card">
+            <h4>🍽️ Menu Items</h4>
+            <p>Add and edit your dishes</p>
+            <button class="btn-primary" style="width: 100%; margin-top: 1rem;">Manage Items</button>
+          </div>
+
+          <div class="menu-card">
+            <h4>⚙️ Options & Add-ons</h4>
+            <p>Customizations for items</p>
+            <button class="btn-primary" style="width: 100%; margin-top: 1rem;">Manage Options</button>
+          </div>
+
+          <div class="menu-card">
+            <h4>📅 Availability</h4>
+            <p>Set available times & days</p>
+            <button class="btn-primary" style="width: 100%; margin-top: 1rem;">Manage Schedule</button>
+          </div>
+        </div>
+      </div>
+    }
+  }
+</div>

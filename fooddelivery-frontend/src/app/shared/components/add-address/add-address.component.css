@@ -1,0 +1,13 @@
+.map-wrapper {
+    flex: 0 0 auto !important;
+    /* prevents auto-collapse */
+    height: 350px !important;
+    min-height: 350px !important;
+    position: relative;
+    display: block !important;
+}
+
+.map-wrapper app-map .map-container {
+    height: 100% !important;
+    min-height: 100% !important;
+}

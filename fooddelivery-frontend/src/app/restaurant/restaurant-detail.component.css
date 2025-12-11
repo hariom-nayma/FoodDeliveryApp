@@ -1,0 +1,61 @@
+.banner {
+    background-color: #1c1c1c;
+    color: white;
+    padding: 40px 0;
+}
+
+.detail-container {
+    margin-top: 2rem;
+}
+
+.menu-layout {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 32px;
+}
+
+.categories ul {
+    list-style: none;
+    padding: 0;
+}
+
+.categories li {
+    margin-bottom: 12px;
+}
+
+.categories a {
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.category-section {
+    margin-bottom: 32px;
+}
+
+.menu-item-card {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid #eee;
+    padding: 16px 0;
+}
+
+.item-type {
+    font-size: 0.8rem;
+    margin-bottom: 4px;
+}
+
+.price {
+    font-weight: bold;
+    margin: 4px 0;
+}
+
+.desc {
+    color: #777;
+    font-size: 0.9rem;
+}
+
+.item-action {
+    display: flex;
+    align-items: center;
+}

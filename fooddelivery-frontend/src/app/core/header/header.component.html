@@ -1,0 +1,18 @@
+<header>
+    <div class="container header-content">
+        <a routerLink="/" class="logo">ZomatoClone</a>
+        <nav>
+            @if (authService.isAuthenticated()) {
+            <span>Welcome, {{ authService.currentUser()?.name }}</span>
+            <a routerLink="/cart" class="btn btn-outline" style="display: flex; align-items: center; gap: 5px;">
+                🛒 Cart @if (cartService.cartCount() > 0) { <span class="badge">{{ cartService.cartCount() }}</span> }
+            </a>
+            <button class="btn btn-outline" (click)="openAddAddress()">📍 Add Address</button>
+            <button class="btn btn-outline" (click)="authService.logout()">Logout</button>
+            } @else {
+            <a routerLink="/login" class="btn btn-primary">Login</a>
+            <a routerLink="/register" class="btn btn-outline">Signup</a>
+            }
+        </nav>
+    </div>
+</header>

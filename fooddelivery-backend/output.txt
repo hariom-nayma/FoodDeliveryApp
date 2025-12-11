@@ -1,0 +1,48 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ---------------< com.fooddelivery:fooddelivery-backend >----------------
+[INFO] Building fooddelivery-backend 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.5.0:clean (default-clean) @ fooddelivery-backend ---
+[INFO] Deleting C:\Users\hario\Projects\FoodDelivery\fooddelivery-backend\target
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ fooddelivery-backend ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 0 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ fooddelivery-backend ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 109 source files with javac [debug parameters release 17] to target\classes
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] /C:/Users/hario/Projects/FoodDelivery/fooddelivery-backend/src/main/java/com/fooddelivery/service/OrderService.java:[119,45] cannot find symbol
+  symbol:   variable COMPLETED
+  location: class com.fooddelivery.entity.PaymentStatus
+[ERROR] /C:/Users/hario/Projects/FoodDelivery/fooddelivery-backend/src/main/java/com/fooddelivery/service/PricingService.java:[60,52] cannot find symbol
+  symbol:   method getDiscountType()
+  location: variable offer of type com.fooddelivery.entity.Offer
+[INFO] 2 errors 
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  10.361 s
+[INFO] Finished at: 2025-12-11T10:39:27+05:30
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.14.1:compile (default-compile) on project fooddelivery-backend: Compilation failure: Compilation failure: 
+[ERROR] /C:/Users/hario/Projects/FoodDelivery/fooddelivery-backend/src/main/java/com/fooddelivery/service/OrderService.java:[119,45] cannot find symbol
+[ERROR]   symbol:   variable COMPLETED
+[ERROR]   location: class com.fooddelivery.entity.PaymentStatus
+[ERROR] /C:/Users/hario/Projects/FoodDelivery/fooddelivery-backend/src/main/java/com/fooddelivery/service/PricingService.java:[60,52] cannot find symbol
+[ERROR]   symbol:   method getDiscountType()
+[ERROR]   location: variable offer of type com.fooddelivery.entity.Offer
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

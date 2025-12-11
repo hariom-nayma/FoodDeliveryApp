@@ -1,0 +1,55 @@
+.home-container {
+    margin-top: 2rem;
+}
+
+h1 {
+    margin-bottom: 24px;
+}
+
+.restaurant-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+}
+
+.restaurant-card {
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s;
+}
+
+.restaurant-card:hover {
+    transform: translateY(-4px);
+}
+
+.img-placeholder {
+    width: 100%;
+    height: 160px;
+    background-color: #eee;
+    border-radius: 4px;
+    margin-bottom: 12px;
+}
+
+.restaurant-desc {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.card-footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.rating {
+    background-color: #24963f;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.min-order {
+    font-size: 0.9rem;
+}

@@ -1,0 +1,51 @@
+@if (restaurant(); as r) {
+<div class="banner">
+    <div class="container">
+        <div class="banner-content">
+            <h1>{{ r.name }}</h1>
+            <p>{{ r.description }}</p>
+            <p>{{ r.ratingAverage }} ★ | {{ r.deliveryRadiusKm }} km | Min ₹{{ r.minOrderAmount }}</p>
+        </div>
+    </div>
+</div>
+}
+
+<div class="container detail-container">
+    <div class="menu-layout">
+        <!-- Categories Sidebar -->
+        <div class="categories">
+            <h3>Menu</h3>
+            <ul>
+                @for (cat of categories(); track cat.id) {
+                <li><a [href]="'#cat-' + cat.id">{{ cat.name }}</a></li>
+                }
+            </ul>
+        </div>
+
+        <!-- Menu Items -->
+        <div class="items">
+            @for (cat of categories(); track cat.id) {
+            <div [id]="'cat-' + cat.id" class="category-section">
+                <h2>{{ cat.name }}</h2>
+
+                @for (item of getItemsByCategory(cat.id); track item.id) {
+                <div class="menu-item-card">
+                    <div class="item-info">
+                        <div class="item-type" [class.veg]="item.foodType === 'VEG'"
+                            [class.non-veg]="item.foodType === 'NON_VEG'">
+                            {{ item.foodType === 'VEG' ? '🟢' : '🔴' }}
+                        </div>
+                        <h4>{{ item.name }}</h4>
+                        <p class="price">₹{{ item.basePrice }}</p>
+                        <p class="desc">{{ item.description }}</p>
+                    </div>
+                    <div class="item-action">
+                        <button class="btn btn-outline" (click)="addToCart(item)">Add</button>
+                    </div>
+                </div>
+                }
+            </div>
+            }
+        </div>
+    </div>
+</div>

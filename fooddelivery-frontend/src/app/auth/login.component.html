@@ -1,0 +1,26 @@
+<div class="container login-container">
+    <div class="card">
+        <h2>Login</h2>
+        <form [formGroup]="form" (ngSubmit)="onSubmit()">
+            <div class="input-group">
+                <label>Email</label>
+                <input type="email" formControlName="email">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" formControlName="password">
+            </div>
+
+            @if (error()) {
+            <div class="error-message">{{ error() }}</div>
+            }
+
+            <button type="submit" class="btn btn-primary btn-full-width" [disabled]="form.invalid || loading()">
+                {{ loading() ? 'Logging in...' : 'Login' }}
+            </button>
+        </form>
+        <p class="register-link">
+            New here? <a routerLink="/register">Create an account</a>
+        </p>
+    </div>
+</div>

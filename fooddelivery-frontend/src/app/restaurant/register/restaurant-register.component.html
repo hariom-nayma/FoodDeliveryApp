@@ -1,0 +1,113 @@
+<div class="container">
+  <div class="card">
+    <h2>Register Your Restaurant</h2>
+    
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+      <!-- Step Progress -->
+      <div style="display:flex; justify-content:space-between; margin-bottom: 2rem; border-bottom: 1px solid #eee; padding-bottom: 1rem;">
+        <div [style.color]="currentStep() >= 1 ? 'var(--primary-color)' : '#ccc'">1. Basic Details</div>
+        <div [style.color]="currentStep() >= 2 ? 'var(--primary-color)' : '#ccc'">2. Operation Info</div>
+        <div [style.color]="currentStep() >= 3 ? 'var(--primary-color)' : '#ccc'">3. Location</div>
+      </div>
+
+      <!-- Step 1: Basic Info -->
+      @if (currentStep() === 1) {
+        <div class="input-group">
+            <label>Restaurant Name</label>
+            <input type="text" formControlName="name" placeholder="e.g. Tandoor Flames">
+        </div>
+
+        <div class="input-group">
+            <label>Description</label>
+            <textarea formControlName="description" rows="3" placeholder="Brief description..."></textarea>
+        </div>
+
+        <div class="grid">
+            <div class="input-group">
+            <label>Phone Number</label>
+            <input type="text" formControlName="phone" placeholder="10 digit mobile">
+            </div>
+            <div class="input-group">
+            <label>Email</label>
+            <input type="email" formControlName="email">
+            </div>
+        </div>
+      }
+
+      <!-- Step 2: Operation Info -->
+      @if (currentStep() === 2) {
+        <div class="input-group">
+            <label>Cuisine Types (comma separated)</label>
+            <input type="text" formControlName="cuisineTypes" placeholder="e.g. North Indian, Chinese, Italian">
+        </div>
+
+        <div class="grid">
+            <div class="input-group">
+            <label>Opening Time</label>
+            <input type="time" formControlName="openingTime">
+            </div>
+            <div class="input-group">
+            <label>Closing Time</label>
+            <input type="time" formControlName="closingTime">
+            </div>
+        </div>
+      }
+
+      <!-- Step 3: Address -->
+      @if (currentStep() === 3) {
+        <h3>Location Details</h3>
+        <div formGroupName="address">
+            <div class="input-group">
+            <label>Address Line 1</label>
+            <input type="text" formControlName="addressLine1">
+            </div>
+            <div class="grid">
+            <div class="input-group">
+                <label>City</label>
+                <input type="text" formControlName="city">
+            </div>
+            <div class="input-group">
+                <label>State</label>
+                <input type="text" formControlName="state">
+            </div>
+            </div>
+            <div class="grid">
+            <div class="input-group">
+                <label>Pincode</label>
+                <input type="text" formControlName="pincode">
+            </div>
+            <div class="input-group">
+                <label>Latitude (Mock)</label>
+                <input type="number" formControlName="latitude">
+            </div>
+            <div class="input-group">
+                <label>Longitude (Mock)</label>
+                <input type="number" formControlName="longitude">
+            </div>
+            </div>
+        </div>
+      }
+      
+      @if (error()) {
+        <div class="error">{{ error() }}</div>
+      }
+
+      <div class="grid" style="margin-top: 2rem;">
+        @if (currentStep() > 1) {
+            <button type="button" (click)="prevStep()" style="background:#666">Back</button>
+        } @else {
+            <div></div> <!-- Spacer -->
+        }
+
+        @if (currentStep() < 3) {
+            <button type="button" (click)="nextStep()">Next</button>
+        } @else {
+            <button type="submit" [disabled]="form.invalid || loading()">
+                {{ loading() ? 'Creating...' : 'Continue to Verification' }}
+            </button>
+        }
+      </div>
+
+    </form>
+  </div>
+</div>

@@ -1,0 +1,205 @@
+<div class="min-h-screen bg-gray-50 flex flex-col">
+  
+  <!-- Header -->
+  <header class="bg-white shadow">
+    <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-gray-900">Delivery Dashboard 🛵</h1>
+      <div class="flex items-center space-x-4">
+        <span class="text-sm font-medium" [class.text-green-600]="isOnline()" [class.text-gray-500]="!isOnline()">
+          {{ isOnline() ? 'Online' : 'Offline' }}
+        </span>
+        <button (click)="toggleStatus()" 
+                [class.bg-green-600]="!isOnline()" [class.bg-red-600]="isOnline()"
+                class="relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none">
+          <span class="translate-x-0 inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200"
+                [class.translate-x-5]="isOnline()" [class.translate-x-0]="!isOnline()"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Message Toast -->
+  <div *ngIf="message()" class="fixed top-20 right-4 bg-gray-800 text-white px-4 py-2 rounded shadow-lg z-50 animate-bounce">
+     {{ message() }}
+  </div>
+
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    
+    <!-- Offline State -->
+    <div *ngIf="!isOnline()" class="text-center py-20">
+      <div class="text-6xl mb-4">😴</div>
+      <h2 class="text-2xl font-semibold text-gray-700">You are Offline</h2>
+      <p class="text-gray-500 mt-2">Go online to start receiving delivery requests.</p>
+    </div>
+
+    <!-- Online Dashboard -->
+    <div *ngIf="isOnline()">
+      
+      <!-- Tabs -->
+      <div class="border-b border-gray-200 mb-6">
+        <nav class="-mb-px flex space-x-8">
+          <button (click)="setTab('requests')" 
+                  [class.border-blue-500]="activeTab() === 'requests'" [class.text-blue-600]="activeTab() === 'requests'"
+                  class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors"
+                  [class.border-transparent]="activeTab() !== 'requests'" [class.text-gray-500]="activeTab() !== 'requests'">
+            New Requests
+            <span *ngIf="requests().length" class="ml-2 bg-red-100 text-red-600 py-0.5 px-2 rounded-full text-xs">{{ requests().length }}</span>
+          </button>
+
+          <button (click)="setTab('active')" 
+                  [class.border-blue-500]="activeTab() === 'active'" [class.text-blue-600]="activeTab() === 'active'"
+                  class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors"
+                  [class.border-transparent]="activeTab() !== 'active'" [class.text-gray-500]="activeTab() !== 'active'">
+            Active Order
+            <span *ngIf="currentOrder()" class="ml-2 bg-green-100 text-green-600 py-0.5 px-2 rounded-full text-xs">1</span>
+          </button>
+
+          <button (click)="setTab('history')" 
+                  [class.border-blue-500]="activeTab() === 'history'" [class.text-blue-600]="activeTab() === 'history'"
+                  class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors"
+                  [class.border-transparent]="activeTab() !== 'history'" [class.text-gray-500]="activeTab() !== 'history'">
+            History
+          </button>
+
+          <button (click)="setTab('earnings')" 
+                  [class.border-blue-500]="activeTab() === 'earnings'" [class.text-blue-600]="activeTab() === 'earnings'"
+                  class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors"
+                  [class.border-transparent]="activeTab() !== 'earnings'" [class.text-gray-500]="activeTab() !== 'earnings'">
+            Earnings
+          </button>
+        </nav>
+      </div>
+
+      <!-- Content: New Requests -->
+      <div *ngIf="activeTab() === 'requests'">
+        <div *ngIf="requests().length === 0" class="text-center py-10 text-gray-500">
+          Searching for orders nearby... 📡
+        </div>
+        <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div *ngFor="let req of requests()" class="bg-white rounded-lg shadow p-6 border border-gray-100">
+            <div class="flex justify-between items-start mb-4">
+              <h3 class="text-lg font-bold text-gray-900">{{ req.restaurantName }}</h3>
+              <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">₹{{ req.earnings }}</span>
+            </div>
+            <div class="text-sm text-gray-600 mb-4 space-y-2">
+              <p>📍 Pickup: <span class="text-gray-800">2.5 km away</span></p>
+              <p>🏁 Drop: <span class="text-gray-800">5.0 km trip</span></p>
+            </div>
+            <div class="flex space-x-3">
+              <button (click)="rejectOrder(req.assignmentId)" class="flex-1 bg-gray-100 text-gray-700 py-2 rounded hover:bg-gray-200">Reject</button>
+              <button (click)="acceptOrder(req.assignmentId)" class="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 shadow">Accept</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content: Active Order -->
+      <div *ngIf="activeTab() === 'active'">
+        <div *ngIf="!currentOrder()" class="text-center py-10 text-gray-500">
+          No active order. Check "New Requests" tab.
+        </div>
+        <div *ngIf="currentOrder()" class="bg-white rounded-xl shadow-lg overflow-hidden max-w-2xl mx-auto">
+          <div class="bg-blue-600 px-6 py-4 text-white flex justify-between items-center">
+            <h3 class="text-lg font-bold">Order #{{ currentOrder().orderId }}</h3>
+            <span class="bg-white/20 px-3 py-1 rounded text-sm">{{ currentOrder().status }}</span>
+          </div>
+          <div class="p-6">
+            <!-- Stepper -->
+            <div class="flex justify-between items-center mb-8 relative">
+                <div class="w-full absolute top-1/2 border-t-2 border-gray-200 z-0"></div>
+                
+                <div class="relative z-10 bg-white px-2">
+                    <div class="h-8 w-8 rounded-full flex items-center justify-center text-white text-sm"
+                        [class.bg-green-500]="true">
+                        ✓
+                    </div>
+                    <p class="text-xs mt-1">Assigned</p>
+                </div>
+                <div class="relative z-10 bg-white px-2">
+                     <div class="h-8 w-8 rounded-full flex items-center justify-center text-white text-sm"
+                        [class.bg-green-500]="currentOrder().status === 'PICKED_UP' || currentOrder().status === 'DELIVERED'"
+                        [class.bg-gray-300]="currentOrder().status !== 'PICKED_UP' && currentOrder().status !== 'DELIVERED'">
+                        {{ currentOrder().status === 'PICKED_UP' || currentOrder().status === 'DELIVERED' ? '✓' : '2' }}
+                    </div>
+                    <p class="text-xs mt-1">Picked</p>
+                </div>
+                <div class="relative z-10 bg-white px-2">
+                    <div class="h-8 w-8 rounded-full flex items-center justify-center text-white text-sm"
+                        [class.bg-green-500]="currentOrder().status === 'DELIVERED'"
+                        [class.bg-gray-300]="currentOrder().status !== 'DELIVERED'">
+                        {{ currentOrder().status === 'DELIVERED' ? '✓' : '3' }}
+                    </div>
+                    <p class="text-xs mt-1">Delivered</p>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <button *ngIf="currentOrder().status === 'ASSIGNED_TO_RIDER'" (click)="markPickedUp()" class="w-full bg-orange-500 text-white py-3 rounded-lg font-bold hover:bg-orange-600 text-lg shadow-md">
+                    Mark Picked Up 📦
+                </button>
+                <button *ngIf="currentOrder().status === 'PICKED_UP'" (click)="markDelivered()" class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 text-lg shadow-md">
+                    Mark Delivered ✅
+                </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content: History -->
+      <div *ngIf="activeTab() === 'history'">
+        <div *ngIf="history().length === 0" class="text-center py-10 text-gray-500">No history yet.</div>
+        <div class="bg-white shadow overflow-hidden sm:rounded-md">
+          <ul class="divide-y divide-gray-200">
+            <li *ngFor="let h of history()" class="px-4 py-4 sm:px-6">
+              <div class="flex items-center justify-between">
+                <p class="text-sm font-medium text-blue-600 truncate">Order #{{ h.orderId }}</p>
+                <div class="ml-2 flex-shrink-0 flex">
+                  <p class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                    Delivered
+                  </p>
+                </div>
+              </div>
+              <div class="mt-2 sm:flex sm:justify-between">
+                <div class="sm:flex">
+                  <p class="flex items-center text-sm text-gray-500">
+                    Earnings: ₹{{ h.earning }}
+                  </p>
+                </div>
+                <div class="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
+                  <p>
+                    {{ h.deliveredAt | date:'short' }}
+                  </p>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Content: Earnings -->
+      <div *ngIf="activeTab() === 'earnings'">
+         <div *ngIf="earnings()" class="grid grid-cols-1 gap-5 sm:grid-cols-3">
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Total Earnings</dt>
+                    <dd class="mt-1 text-3xl font-semibold text-gray-900">₹{{ earnings().totalEarnings }}</dd>
+                </div>
+            </div>
+             <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Orders Completed</dt>
+                    <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ earnings().ordersCompleted }}</dd>
+                </div>
+            </div>
+             <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Incentives</dt>
+                    <dd class="mt-1 text-3xl font-semibold text-green-600">+₹{{ earnings().incentives }}</dd>
+                </div>
+            </div>
+         </div>
+      </div>
+
+    </div>
+  </main>
+</div>

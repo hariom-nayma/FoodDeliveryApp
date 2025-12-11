@@ -1,0 +1,21 @@
+.map-container {
+    position: relative !important;
+    /* prevents collapse */
+    width: 100%;
+    height: 100% !important;
+    min-height: 300px !important;
+    border-radius: 12px;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.leaflet-container {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+@media (min-width: 768px) {
+    .map-container {
+        height: 400px;
+    }
+}

@@ -1,0 +1,18 @@
+.register-container {
+  max-width: 400px;
+  margin-top: 4rem;
+}
+
+.error-message {
+  color: red;
+  margin-bottom: 1rem;
+}
+
+.btn-full-width {
+  width: 100%;
+}
+
+.login-link {
+  margin-top: 1rem;
+  text-align: center;
+}

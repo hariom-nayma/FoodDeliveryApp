@@ -1,0 +1,37 @@
+<div class="container register-container">
+    <div class="card">
+        <h2>Sign Up</h2>
+        <form [formGroup]="form" (ngSubmit)="onSubmit()">
+            <div class="input-group">
+                <label>Full Name</label>
+                <input type="text" formControlName="name">
+            </div>
+            <div class="input-group">
+                <label>Email</label>
+                <input type="email" formControlName="email">
+            </div>
+            <div class="input-group">
+                <label>Phone</label>
+                <input type="text" formControlName="phone">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" formControlName="password">
+                @if (passwordError()) {
+                    <div style="color: red; font-size: 0.8rem; margin-top: 0.2rem;">{{ passwordError() }}</div>
+                }
+            </div>
+
+            @if (error()) {
+            <div class="error-message">{{ error() }}</div>
+            }
+
+            <button type="submit" class="btn btn-primary btn-full-width" [disabled]="form.invalid || loading()">
+                {{ loading() ? 'Signing up...' : 'Sign Up' }}
+            </button>
+        </form>
+        <p class="login-link">
+            Already have an account? <a routerLink="/login">Login</a>
+        </p>
+    </div>
+</div>

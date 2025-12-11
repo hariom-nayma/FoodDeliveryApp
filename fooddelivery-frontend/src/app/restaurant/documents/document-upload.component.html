@@ -1,0 +1,42 @@
+<div class="container">
+    <div class="card">
+        <h2>Compliance Documents</h2>
+        <p>Please provide your business verification details to proceed.</p>
+
+        <form [formGroup]="form" (ngSubmit)="onSubmit()">
+            <div class="input-group">
+                <label>GST Number</label>
+                <input type="text" formControlName="gstNumber" placeholder="15 digit GSTIN">
+            </div>
+
+            <div class="input-group">
+                <label>FSSAI License Number</label>
+                <input type="text" formControlName="fssaiNumber" placeholder="14 digit License">
+            </div>
+
+            <!-- Mocking File Uploads as URL inputs -->
+            <div class="input-group">
+                <label>GST Certificate URL</label>
+                <input type="text" formControlName="gstCertificateUrl" placeholder="https://...">
+            </div>
+
+            <div class="input-group">
+                <label>FSSAI License URL</label>
+                <input type="text" formControlName="fssaiLicenseUrl" placeholder="https://...">
+            </div>
+
+            <div class="input-group">
+                <label>PAN Card URL</label>
+                <input type="text" formControlName="panCardUrl" placeholder="https://...">
+            </div>
+
+            @if (error()) {
+            <div class="error">{{ error() }}</div>
+            }
+
+            <button type="submit" [disabled]="form.invalid || loading()">
+                {{ loading() ? 'Processing...' : 'Submit & Request Review' }}
+            </button>
+        </form>
+    </div>
+</div>

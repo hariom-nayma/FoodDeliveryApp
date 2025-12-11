@@ -1,0 +1,32 @@
+<div class="container home-container">
+    <h1>Restaurants Nearby @if(detectedCity()) { in {{ detectedCity() }} }</h1>
+
+    <div class="mb-4 text-gray-600">
+        {{ locationStatus() }} 
+        @if(locationStatus() === 'Location access denied') {
+            <button class="ml-2 text-blue-500 underline" (click)="detectLocation()">Retry</button>
+        }
+    </div>
+
+    @if (loading()) {
+    <div>Loading restaurants...</div>
+    }
+
+    <div class="restaurant-grid">
+        @for (restaurant of restaurants(); track restaurant.id) {
+        <a [routerLink]="['/restaurant', restaurant.id]" class="card restaurant-card">
+            <div class="img-placeholder"></div>
+            <h3>{{ restaurant.name }}</h3>
+            <p class="restaurant-desc">{{ restaurant.description }}</p>
+            <div class="card-footer">
+                <span class="rating">★ {{ restaurant.ratingAverage || 'New' }}</span>
+                <span class="min-order">Min ₹{{ restaurant.minOrderAmount }}</span>
+            </div>
+        </a>
+        } @empty {
+        @if (!loading()) {
+        <p>No restaurants found.</p>
+        }
+        }
+    </div>
+</div>
