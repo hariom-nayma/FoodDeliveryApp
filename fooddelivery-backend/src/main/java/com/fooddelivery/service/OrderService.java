@@ -4,10 +4,14 @@ import com.fooddelivery.dto.request.AddToCartRequest;
 import com.fooddelivery.dto.request.CalculatePriceRequest;
 import com.fooddelivery.dto.request.CreateOrderRequest;
 import com.fooddelivery.dto.request.CartOptionRequest;
+import com.fooddelivery.dto.response.OrderTrackingResponse;
 import com.fooddelivery.dto.response.PricingResponse;
 import com.fooddelivery.entity.*;
+import com.fooddelivery.repository.AddressRepository;
 import com.fooddelivery.repository.OrderItemRepository;
 import com.fooddelivery.repository.OrderRepository;
+import com.fooddelivery.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -22,9 +27,11 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    private final AddressRepository addressRepository;
     private final CartService cartService;
     private final PricingService pricingService;
     private final ObjectMapper objectMapper;
+    private final UserRepository userRepo;
 
     @Transactional
     public Order createOrder(String userId, CreateOrderRequest request) {
@@ -57,6 +64,15 @@ public class OrderService {
 
         PricingResponse pricing = pricingService.calculatePrice(priceReq);
 
+        // Fetch Address Snapshot
+        Address address = addressRepository.findById(request.getDeliveryAddressId())
+                .orElseThrow(() -> new RuntimeException("Address not found"));
+        String addressJson = request.getDeliveryAddressId(); // Fallback
+        try {
+            addressJson = objectMapper.writeValueAsString(address);
+        } catch (Exception e) {
+        }
+
         // 2. Create Order
         Order order = Order.builder()
                 .user(cart.getUser())
@@ -72,7 +88,7 @@ public class OrderService {
                 .deliveryFee(pricing.getDeliveryFee())
                 .totalAmount(pricing.getTotal())
                 .offerAppliedCode(pricing.getOfferApplied())
-                .deliveryAddressJson(request.getDeliveryAddressId())
+                .deliveryAddressJson(addressJson) // Storing full snapshot
                 .build();
 
         Order savedOrder = orderRepository.save(order);
@@ -153,10 +169,112 @@ public class OrderService {
         return orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
     }
 
-    public List<Order> getActiveOrders(String userId) {
-        return orderRepository.findByUserIdAndStatusNotInOrderByCreatedAtDesc(userId, List.of(
+    public List<OrderTrackingResponse> getActiveOrders(String userId) {
+        List<Order> orders = orderRepository.findByUserIdAndStatusNotInOrderByCreatedAtDesc(userId, List.of(
                 OrderStatus.DELIVERED,
                 OrderStatus.CANCELLED,
                 OrderStatus.REJECTED));
+
+        return orders.stream()
+                .map(this::buildTrackingResponse)
+                .collect(Collectors.toList());
+    }
+
+    public OrderTrackingResponse getTrackingDetails(String orderId) {
+        return buildTrackingResponse(getOrder(orderId));
+    }
+
+    private OrderTrackingResponse buildTrackingResponse(Order order) {
+        // 1. User Location
+        OrderTrackingResponse.Location userLoc = null;
+        String addressRef = order.getDeliveryAddressJson();
+
+        if (addressRef != null) {
+            // A. Try parsing as JSON Snapshot
+            try {
+                if (addressRef.trim().startsWith("{")) {
+                    com.fasterxml.jackson.databind.JsonNode node = objectMapper.readTree(addressRef);
+                    if (node.has("latitude") && node.has("longitude")) {
+                        userLoc = OrderTrackingResponse.Location.builder()
+                                .latitude(node.get("latitude").asDouble())
+                                .longitude(node.get("longitude").asDouble())
+                                .addressLabel(node.has("label") ? node.get("label").asText() : "Delivery Location")
+                                .build();
+                    }
+                }
+            } catch (Exception e) {
+                // Ignore parse errors, proceed to ID lookup
+            }
+
+            // B. Fallback: Treat as Address ID if snapshot failed
+            if (userLoc == null) {
+                try {
+                    // Try to clean potential quotes if stored as JSON string "ID"
+                    String addressId = addressRef.replace("\"", "").trim();
+                    Optional<Address> addrOpt = addressRepository.findById(addressId);
+                    if (addrOpt.isPresent()) {
+                        Address addr = addrOpt.get();
+                        userLoc = OrderTrackingResponse.Location.builder()
+                                .latitude(addr.getLatitude())
+                                .longitude(addr.getLongitude())
+                                .addressLabel(addr.getLabel())
+                                .build();
+                    }
+                } catch (Exception e) {
+                }
+            }
+        }
+
+        // 2. Restaurant Location
+        OrderTrackingResponse.Location restLoc = null;
+        if (order.getRestaurant() != null && order.getRestaurant().getAddress() != null) {
+            RestaurantAddress addr = order.getRestaurant().getAddress();
+            restLoc = OrderTrackingResponse.Location.builder()
+                    .latitude(addr.getLatitude())
+                    .longitude(addr.getLongitude())
+                    .addressLabel(order.getRestaurant().getName())
+                    .build();
+        }
+
+        // 3. Rider Location
+        OrderTrackingResponse.Location riderLoc = null;
+        String riderName = null;
+        String riderPhone = null;
+        String riderVehicle = null;
+        String riderVehicleType = null;
+
+        if (order.getDeliveryPartner() != null) {
+            DeliveryPartner dp = order.getDeliveryPartner();
+
+            Optional<User> user = userRepo.findById(dp.getUserId());
+            if (user.isPresent()) {
+                riderName = user.get().getName();
+                riderPhone = user.get().getPhone();
+                riderVehicle = "N/A";
+                riderVehicleType = dp.getVehicleType();
+            }
+
+            if (dp.getCurrentLatitude() != null && dp.getCurrentLongitude() != null) {
+                riderLoc = OrderTrackingResponse.Location.builder()
+                        .latitude(dp.getCurrentLatitude())
+                        .longitude(dp.getCurrentLongitude())
+                        .addressLabel("Rider")
+                        .build();
+            }
+        }
+
+        return OrderTrackingResponse.builder()
+                .orderId(order.getId())
+                .status(order.getStatus().toString())
+                .estimatedDeliveryTime(order.getEstimatedDeliveryTime())
+                .userLocation(userLoc)
+                .restaurantLocation(restLoc)
+                .riderLocation(riderLoc)
+                .restaurantName(order.getRestaurant().getName())
+                .riderName(riderName)
+                .riderPhone(riderPhone)
+                .riderVehicleNumber(riderVehicle)
+                .riderVehicleType(riderVehicleType)
+                .build();
     }
 }

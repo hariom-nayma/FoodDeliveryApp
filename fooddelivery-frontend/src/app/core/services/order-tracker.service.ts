@@ -9,7 +9,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 })
 export class OrderTrackerService {
     private http = inject(HttpClient);
-    private apiUrl = '/api/v1/orders/active';
+    private apiUrl = '/api/v1/orders';
 
     // Manual refresh trigger
     private refreshTrigger = signal(0);
@@ -17,14 +17,15 @@ export class OrderTrackerService {
     // Poll every 15 seconds
     activeOrdersResource = toSignal(
         timer(0, 15000).pipe(
-            switchMap(() => this.http.get<any>(this.apiUrl)),
-            retry(3), // Retry on failure
-            tap(res => {
-                // Optional: Check if status changed and notify
-            })
+            switchMap(() => this.http.get<any>(this.apiUrl + '/active')),
+            retry(3)
         ),
         { initialValue: null }
     );
+
+    getTrackingDetails(orderId: string) {
+        return this.http.get<any>(`${this.apiUrl}/${orderId}/tracking`);
+    }
 
     activeOrders = computed(() => {
         const res = this.activeOrdersResource();

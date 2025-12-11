@@ -3,6 +3,7 @@ package com.fooddelivery.controller;
 import com.fooddelivery.dto.response.ApiResponse;
 import com.fooddelivery.dto.request.CreateOrderRequest;
 import com.fooddelivery.dto.request.PaymentConfirmationRequest;
+import com.fooddelivery.dto.response.OrderTrackingResponse;
 import com.fooddelivery.entity.Order;
 import com.fooddelivery.entity.OrderStatus;
 import com.fooddelivery.repository.UserRepository;
@@ -100,9 +101,18 @@ public class OrderController {
     public ResponseEntity<ApiResponse<Order>> getOrder(@PathVariable String id) {
         return ResponseEntity.ok(ApiResponse.success("Order details", orderService.getOrder(id)));
     }
+
     @GetMapping("/active")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<List<Order>>> getActiveOrders(@AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(ApiResponse.success("Active orders fetched", orderService.getActiveOrders(getUserId(userDetails))));
+    public ResponseEntity<ApiResponse<List<OrderTrackingResponse>>> getActiveOrders(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity
+                .ok(ApiResponse.success("Active orders fetched", orderService.getActiveOrders(getUserId(userDetails))));
+    }
+
+    @GetMapping("/{id}/tracking")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<OrderTrackingResponse>> getTrackingDetails(@PathVariable String id) {
+        return ResponseEntity.ok(ApiResponse.success("Tracking details", orderService.getTrackingDetails(id)));
     }
 }

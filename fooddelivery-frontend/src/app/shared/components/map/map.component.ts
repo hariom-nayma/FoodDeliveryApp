@@ -12,7 +12,8 @@ import { CommonModule } from '@angular/common';
 })
 export class MapComponent {
   @Input() center = { lat: 28.6139, lng: 77.2090 };
-  @Input() showMarker = true;
+  @Input() showMarker = true; // Use for single marker mode
+  @Input() markers: { lat: number, lng: number, title?: string, icon?: string }[] = [];
 
   @Output() locationSelected = new EventEmitter<{ lat: number; lng: number, accuracy: number | null }>();
 
@@ -20,7 +21,7 @@ export class MapComponent {
   private map!: L.Map;
   private marker?: L.Marker;
 
-  constructor(private host: ElementRef) {}
+  constructor(private host: ElementRef) { }
 
   /** Called manually AFTER dialog is visible */
   public initializeMap() {
@@ -47,13 +48,37 @@ export class MapComponent {
       this.locationSelected.emit(coords);
     });
 
-    if (this.showMarker) {
+    if (this.showMarker && this.markers.length === 0) {
       this.marker = L.marker([this.center.lat, this.center.lng]).addTo(this.map);
+    }
+
+    // Add custom markers
+    if (this.markers.length > 0) {
+      const group = L.featureGroup();
+      this.markers.forEach(m => {
+        const options: L.MarkerOptions = {};
+        if (m.icon) {
+          options.icon = L.icon({
+            iconUrl: m.icon,
+            iconSize: [40, 40],
+            iconAnchor: [20, 40],
+            popupAnchor: [0, -40]
+          });
+        }
+        const marker = L.marker([m.lat, m.lng], options);
+        if (m.title) marker.bindPopup(m.title);
+        marker.addTo(this.map);
+        group.addLayer(marker);
+      });
+      group.addTo(this.map);
+      try {
+        this.map.fitBounds(group.getBounds().pad(0.2));
+      } catch (e) { }
     }
 
     // Force resize to fill container
     setTimeout(() => {
-        this.map.invalidateSize();
+      this.map.invalidateSize();
     }, 200);
   }
 
@@ -72,28 +97,28 @@ export class MapComponent {
     let watchId = 0;
 
     const finish = () => {
-       navigator.geolocation.clearWatch(watchId);
-       if (!best) {
-         alert("Unable to get accurate location");
-         return;
-       }
-       const { latitude, longitude, accuracy } = best.coords;
-       console.log("FINAL BEST ACCURACY:", accuracy);
+      navigator.geolocation.clearWatch(watchId);
+      if (!best) {
+        alert("Unable to get accurate location");
+        return;
+      }
+      const { latitude, longitude, accuracy } = best.coords;
+      console.log("FINAL BEST ACCURACY:", accuracy);
 
-       this.map.setView([latitude, longitude], 17);
+      this.map.setView([latitude, longitude], 17);
 
-       if (this.marker) this.marker.remove();
-       this.marker = L.marker([latitude, longitude]).addTo(this.map);
+      if (this.marker) this.marker.remove();
+      this.marker = L.marker([latitude, longitude]).addTo(this.map);
 
-       this.locationSelected.emit({ lat: latitude, lng: longitude, accuracy });
+      this.locationSelected.emit({ lat: latitude, lng: longitude, accuracy });
     }
 
     // Step 1: Force Refresh GPS Lock (One shot)
     navigator.geolocation.getCurrentPosition(
-      (pos) => { 
-          if (!best || pos.coords.accuracy < best.coords.accuracy) best = pos;
-      }, 
-      () => {}, 
+      (pos) => {
+        if (!best || pos.coords.accuracy < best.coords.accuracy) best = pos;
+      },
+      () => { },
       { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 } // Extended timeout
     );
 
@@ -109,6 +134,6 @@ export class MapComponent {
     );
 
     // Step 3: Stop after 3s
-    setTimeout(finish, 3000); 
+    setTimeout(finish, 3000);
   }
 }

@@ -1,16 +1,22 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, AfterViewInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { MapComponent } from '../../shared/components/map/map.component';
 
 @Component({
-  selector: 'app-order-tracking-modal',
-  standalone: true,
-  imports: [CommonModule],
-  template: `
+    selector: 'app-order-tracking-modal',
+    standalone: true,
+    imports: [CommonModule, MapComponent],
+    template: `
     <div class="modal-backdrop" (click)="close.emit()">
       <div class="modal-content" (click)="$event.stopPropagation()">
         <div class="modal-header">
             <h2>Order Tracking</h2>
             <button class="close-btn" (click)="close.emit()">×</button>
+        </div>
+        
+        <!-- Live Map -->
+        <div class="map-wrapper" *ngIf="mapMarkers.length > 0">
+             <app-map [markers]="mapMarkers" [showMarker]="false" style="height: 200px; display: block; border-radius: 12px; overflow: hidden; margin-bottom: 1rem;"></app-map>
         </div>
         
         <div class="status-timeline">
@@ -46,18 +52,21 @@ import { CommonModule } from '@angular/common';
                 <p>{{ order.estimatedDeliveryTime | date:'shortTime' }}</p>
             </div>
             
-             <div class="rider-info" *ngIf="order.deliveryPartner">
-                <img [src]="order.deliveryPartner.drivingLicenseUrl || 'assets/rider-placeholder.png'" alt="Rider" class="rider-img"> <!-- Fallback image needed -->
+             <div class="rider-info" *ngIf="trackingDetails?.riderName">
+                <img [src]="'assets/rider-placeholder.png'" alt="Rider" class="rider-img"> 
                 <div class="rider-text">
-                     <strong>Rider on the way</strong>
-                     <span>{{ order.deliveryPartner.vehicleType }}</span>
+                     <strong>{{ trackingDetails.riderName }}</strong>
+                     <span>{{ trackingDetails.riderVehicleType }} - {{ trackingDetails.riderVehicleNumber }}</span>
+                </div>
+                <div class="rider-contact" *ngIf="trackingDetails.riderPhone">
+                    📞 {{ trackingDetails.riderPhone }}
                 </div>
             </div>
         </div>
       </div>
     </div>
   `,
-  styles: [`
+    styles: [`
     .modal-backdrop {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: rgba(0,0,0,0.5); z-index: 10000;
@@ -67,12 +76,14 @@ import { CommonModule } from '@angular/common';
         background: white; width: 100%; max-width: 500px;
         border-radius: 20px 20px 0 0; padding: 20px;
         animation: slideUp 0.3s ease-out;
+        max-height: 90vh; /* Scrollable if needed */
+        overflow-y: auto;
     }
     @media(min-width: 768px) {
         .modal-backdrop { align-items: center; }
         .modal-content { border-radius: 12px; }
     }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
     .close-btn { background: none; border: none; font-size: 2rem; cursor: pointer; }
     
     .status-timeline { margin-bottom: 2rem; padding-left: 10px; }
@@ -99,38 +110,106 @@ import { CommonModule } from '@angular/common';
     }
   `]
 })
-export class OrderTrackingModalComponent {
-  @Input() order: any;
-  @Output() close = new EventEmitter<void>();
+export class OrderTrackingModalComponent implements OnInit {
+    @Input() order: any;
+    @Output() close = new EventEmitter<void>();
 
-  // Helper to determine step state
-  private statusOrder = ['PLACED', 'ACCEPTED', 'COOKING', 'READY_FOR_PICKUP', 'ASSIGNED_TO_RIDER', 'PICKED_UP', 'DELIVERED'];
-  // Note: READY_FOR_PICKUP might happen before or after ASSIGNED_TO_RIDER depending on flow, but assuming linear progression for UI roughly.
-  // Actually, ASSIGNED_TO_RIDER usually happens around COOKING/READY.
-  // Let's simplify mapping:
-  
-  get currentStepIndex() {
-      // Map current status to index
-      const status = this.order.status;
-      if (status === 'ASSIGNED_TO_RIDER') return 3; // Treat as after COOKING
-      if (status === 'READY_FOR_PICKUP') return 2; // Treat same as COOKING for simplicity or add step
-      if (status === 'PICKED_UP') return 4;
-      return this.statusOrder.indexOf(status);
-  }
+    @ViewChild(MapComponent) mapComponent!: MapComponent;
 
-  isStepCompleted(stepName: string) {
-     return this.getStatusIndex(this.order.status) > this.getStatusIndex(stepName);
-  }
-  
-  isStepActive(stepName: string) {
-      return this.order.status === stepName;
-  }
+    mapMarkers: any[] = [];
+    trackingDetails: any = null; // Full details from API
 
-  getStatusIndex(status: string) {
-       // Custom order for UI visualization
-       const uiOrder = ['PLACED', 'ACCEPTED', 'COOKING', 'ASSIGNED_TO_RIDER', 'PICKED_UP', 'DELIVERED'];
-       // Map others
-       if (status === 'READY_FOR_PICKUP') return 2; // Show as Cooking complete
-       return uiOrder.indexOf(status);
-  }
+    constructor() { }
+
+    ngOnInit() {
+        if (this.order) {
+            this.trackingDetails = this.order;
+            this.prepareMapMarkers();
+        }
+    }
+
+    ngAfterViewInit() {
+        // Slight delay to ensure DOM render
+        setTimeout(() => {
+            if (this.mapComponent && this.mapMarkers.length > 0) {
+                this.mapComponent.initializeMap();
+            }
+        }, 300);
+    }
+
+    prepareMapMarkers() {
+        if (!this.trackingDetails) return;
+
+        this.mapMarkers = [];
+        const details = this.trackingDetails;
+
+        // 1. Restaurant Location
+        if (details.restaurantLocation) {
+            this.mapMarkers.push({
+                lat: details.restaurantLocation.latitude,
+                lng: details.restaurantLocation.longitude,
+                title: details.restaurantLocation.addressLabel || 'Restaurant',
+                type: 'restaurant',
+                icon: 'assets/restaurant-marker.png'
+            });
+        }
+
+        // 2. User Location
+        if (details.userLocation) {
+            this.mapMarkers.push({
+                lat: details.userLocation.latitude,
+                lng: details.userLocation.longitude,
+                title: details.userLocation.addressLabel || 'Delivery Location',
+                type: 'user',
+                icon: 'assets/deliverlocation-marker.png'
+            });
+        }
+
+
+        // 3. Rider Location
+        if (details.riderLocation) {
+            this.mapMarkers.push({
+                lat: details.riderLocation.latitude,
+                lng: details.riderLocation.longitude,
+                title: details.riderName + ' (Rider)',
+                type: 'rider',
+                icon: 'assets/deliveryman-marker.png'
+            });
+        }
+
+        // Trigger Map Init
+        setTimeout(() => {
+            if (this.mapComponent) {
+                this.mapComponent.markers = this.mapMarkers;
+                this.mapComponent.initializeMap();
+            }
+        }, 100);
+    }
+
+    // Helper to determine step state
+    private statusOrder = ['PLACED', 'ACCEPTED', 'COOKING', 'READY_FOR_PICKUP', 'ASSIGNED_TO_RIDER', 'PICKED_UP', 'DELIVERED'];
+
+    get currentStepIndex() {
+        // Map current status to index
+        const status = this.order.status;
+        if (status === 'ASSIGNED_TO_RIDER') return 3; // Treat as after COOKING
+        if (status === 'READY_FOR_PICKUP') return 2; // Treat same as COOKING for simplicity or add step
+        if (status === 'PICKED_UP') return 4;
+        return this.statusOrder.indexOf(status);
+    }
+
+    isStepCompleted(stepName: string) {
+        return this.getStatusIndex(this.order.status) > this.getStatusIndex(stepName);
+    }
+
+    isStepActive(stepName: string) {
+        return this.order.status === stepName;
+    }
+
+    getStatusIndex(status: string) {
+        // Custom order for UI visualization
+        const uiOrder = ['PLACED', 'ACCEPTED', 'COOKING', 'ASSIGNED_TO_RIDER', 'PICKED_UP', 'DELIVERED'];
+        if (status === 'READY_FOR_PICKUP') return 2; // Show as Cooking complete
+        return uiOrder.indexOf(status);
+    }
 }

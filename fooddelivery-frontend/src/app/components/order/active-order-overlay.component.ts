@@ -14,7 +14,7 @@ import { OrderTrackingModalComponent } from './order-tracking-modal.component';
             <div class="icon">🛵</div>
             <div class="info">
                <span class="status">{{ order().status }}</span>
-               <span class="restaurant">{{ order().restaurant?.name }}</span>
+               <span class="restaurant">{{ order().restaurantName }}</span>
             </div>
             <div class="arrow">›</div>
          </div>
