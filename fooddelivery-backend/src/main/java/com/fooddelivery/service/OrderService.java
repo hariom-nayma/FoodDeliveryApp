@@ -61,7 +61,8 @@ public class OrderService {
         Order order = Order.builder()
                 .user(cart.getUser())
                 .restaurant(cart.getRestaurant())
-                .status("COD".equalsIgnoreCase(request.getPaymentMethod()) ? OrderStatus.PLACED : OrderStatus.PENDING_PAYMENT)
+                .status("COD".equalsIgnoreCase(request.getPaymentMethod()) ? OrderStatus.PLACED
+                        : OrderStatus.PENDING_PAYMENT)
                 .paymentStatus(PaymentStatus.PENDING)
                 .orderType(OrderType.DELIVERY) // Assume delivery for now
                 .estimatedDeliveryTime(LocalDateTime.now().plusMinutes(pricing.getEtaMinutes()))
@@ -150,5 +151,12 @@ public class OrderService {
 
     public Order getOrder(String orderId) {
         return orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+    }
+
+    public List<Order> getActiveOrders(String userId) {
+        return orderRepository.findByUserIdAndStatusNotInOrderByCreatedAtDesc(userId, List.of(
+                OrderStatus.DELIVERED,
+                OrderStatus.CANCELLED,
+                OrderStatus.REJECTED));
     }
 }

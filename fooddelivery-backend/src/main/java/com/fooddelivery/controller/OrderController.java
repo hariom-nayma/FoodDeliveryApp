@@ -100,4 +100,9 @@ public class OrderController {
     public ResponseEntity<ApiResponse<Order>> getOrder(@PathVariable String id) {
         return ResponseEntity.ok(ApiResponse.success("Order details", orderService.getOrder(id)));
     }
+    @GetMapping("/active")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<List<Order>>> getActiveOrders(@AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(ApiResponse.success("Active orders fetched", orderService.getActiveOrders(getUserId(userDetails))));
+    }
 }
