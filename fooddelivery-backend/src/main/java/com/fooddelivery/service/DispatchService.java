@@ -11,11 +11,15 @@ import com.fooddelivery.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import com.fooddelivery.dto.ScoredRider;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,47 +27,158 @@ import java.util.stream.Collectors;
 public class DispatchService {
 
     private final RedisService redisService;
-    private final OpenRouteService openRouteService;
     private final DeliveryPartnerRepository deliveryPartnerRepository;
     private final DeliveryAssignmentRepository deliveryAssignmentRepository;
     private final OrderRepository orderRepository;
     private final SocketIOServer socketIOServer;
+    private final ScoringService scoringService;
+    private final PricingService pricingService;
+    private final org.springframework.transaction.support.TransactionTemplate transactionTemplate;
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
 
-    private static final double SEARCH_RADIUS_KM = 3.0;
+    private static final double INITIAL_SEARCH_RADIUS_KM = 3.0;
+    private static final double MAX_SEARCH_RADIUS_KM = 12.0;
 
     public void dispatchOrder(String orderId) {
-        Order order = orderRepository.findById(orderId).orElseThrow();
-        if (order.getRestaurant().getAddress() == null)
-            return;
+        // Run in background
+        System.out.println("Dispatching order: " + orderId);
+        scheduler.execute(() -> startMatching(orderId));
+    }
 
-        double restLat = order.getRestaurant().getAddress().getLatitude();
-        double restLng = order.getRestaurant().getAddress().getLongitude();
+    private void startMatching(String orderId) {
+        try {
+            transactionTemplate.execute(status -> {
+                System.out.println("Matching order: " + orderId);
+                Order order = orderRepository.findById(orderId).orElse(null);
+                if (order == null) {
+                    System.out.println("Order not found: " + orderId);
+                    return null;
+                }
 
-        // 1. Find nearby riders
-        List<String> riderIds = redisService.findNearbyRiders(restLat, restLng, SEARCH_RADIUS_KM, 10);
+                if (order.getRestaurant() == null || order.getRestaurant().getAddress() == null) {
+                    System.out.println("Order Restaurant or Address missing");
+                    return null;
+                }
 
-        if (riderIds.isEmpty()) {
-            // Handle fallback (expand radius - future)
-            return;
-        }
+                double radiusKm = INITIAL_SEARCH_RADIUS_KM;
+                boolean assigned = false;
+                double surgeMultiplier = 1.0;
+                int attempt = 0;
 
-        // 2. Score Riders (Simplified: just distance for now)
-        // In real app: fetch rider stats, rating, etc.
-        List<DeliveryPartner> riders = deliveryPartnerRepository.findAllById(riderIds);
-
-        // 3. Sort by score (mock: simple closest first as Redis returned sorted by
-        // dist)
-        // We'll trust Redis for distance sort.
-
-        // 4. Send Request to Best Rider (First one)
-        // ideally we loop, but for MVP we try the first one.
-        if (!riders.isEmpty()) {
-            sendAssignmentRequest(riders.get(0), order);
+                while (!assigned && radiusKm <= MAX_SEARCH_RADIUS_KM) {
+                    
+                    // 1. Find nearby riders
+                    double lat = order.getRestaurant().getAddress().getLatitude();
+                    double lng = order.getRestaurant().getAddress().getLongitude();
+                    System.out.println("Searching at: " + lat + ", " + lng + " Radius=" + radiusKm);
+                    
+                    List<String> candidateIds = redisService.findNearbyRiders(lat, lng, radiusKm, 20);
+                    System.out.println("Found candidate IDs in Redis: " + candidateIds);
+                    
+                    List<DeliveryPartner> candidates = deliveryPartnerRepository.findAllById(candidateIds);
+                    System.out.println("Found candidate Entities: " + candidates.size());
+                    
+                    // 2. Score Riders
+                    List<ScoredRider> ranked = scoreAndRankCandidates(candidates, order, surgeMultiplier);
+                    
+                    // 3. Attempt Assignment (Recursive/Sequential)
+                    if (!ranked.isEmpty()) {
+                        attemptAssignment(ranked, order, surgeMultiplier);
+                        return null; // Exit loop, let the recursion logic take over. 
+                    }
+                    
+                    System.out.println("No candidates found in this radius, expanding radius: " + radiusKm);
+                    radiusKm += 3.0;
+                    surgeMultiplier += 0.1;
+                    attempt++;
+                }
+                
+                System.out.println("Exited loop. Assigned: " + assigned);
+                return null;
+            });
+            
+        } catch (Exception e) {
+            System.err.println("Error in startMatching: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
-    private void sendAssignmentRequest(DeliveryPartner rider, Order order) {
-        // Create Assignment Record
+    private List<ScoredRider> scoreAndRankCandidates(List<DeliveryPartner> candidates, Order order, double surge) {
+        double restLat = order.getRestaurant().getAddress().getLatitude();
+        double restLng = order.getRestaurant().getAddress().getLongitude();
+
+        return candidates.stream().map(rider -> {
+             // Use ORS or Estimate for metrics
+             // For MVP speed, we use Haversine Estimate, ORS is expensive in loop
+             // In Prod: Batch ORS call or use Haversine for filtering
+            double distKm = calculateDistance(restLat, restLng, rider.getCurrentLatitude(), rider.getCurrentLongitude());
+            double speedKmh = 30.0;
+            double durationMin = (distKm / speedKmh) * 60;
+
+            double score = scoringService.scoreRider(
+                rider, distKm, durationMin, 
+                rider.getRatingAverage() != null ? rider.getRatingAverage() : 5.0,
+                rider.getTotalDeliveriesCompleted() != null ? 0 : 0 // Active orders not tracked in entity yet, assume 0
+            );
+
+            return ScoredRider.builder()
+                    .rider(rider)
+                    .score(score)
+                    .distanceKm(distKm)
+                    .durationMin(durationMin)
+                    .build();
+        })
+        .sorted(Comparator.comparing(ScoredRider::getScore).reversed()) // High score first
+        .collect(Collectors.toList());
+    }
+
+    private void attemptAssignment(List<ScoredRider> candidates, Order order, double surgeMultiplier) {
+        if (candidates.isEmpty()) {
+            // No more candidates in this batch. 
+            // In a full system, we would Trigger "Expand Radius" event here.
+            return;
+        }
+        System.out.println("Attempting assignment for order: " + order.getId());
+
+        ScoredRider best = candidates.get(0);
+        DeliveryPartner rider = best.getRider();
+        
+        // Lock to prevent double assignment attempts if multiple threads run
+        String lockKey = "order_lock_" + order.getId();
+        if (!redisService.tryLock(lockKey, 15)) {
+             // Failed to acquire lock, another process might be handling this order
+             // For simplify, we just return or log. 
+             // In recursive logic, this might be tricky if we want to retry later.
+             // But if locked, it means we are ALREADY assigning.
+             return;
+        }
+        
+        sendAssignmentRequest(rider, order, best, surgeMultiplier);
+
+        // Schedule check in 10s
+        scheduler.schedule(() -> {
+            // Need new transaction for check
+            transactionTemplate.execute(status -> {
+                // Check if Accepted
+                boolean accepted = deliveryAssignmentRepository.existsByOrderAndStatus(order, "ACCEPTED"); // Simplified check
+                // Note: deliveryAssignmentRepository needs to support `existsByOrderAndStatus` or similar.
+                // Or check Order status directly.
+                System.out.println("Assignment status for order: " + order.getId() + " is: " + accepted);
+                
+                Order currentOrder = orderRepository.findById(order.getId()).orElse(null);
+                if (currentOrder != null && !"ASSIGNED_TO_RIDER".equals(currentOrder.getStatus().name())) {
+                    // Not assigned yet (Rejected or Timeout)
+                    // Mark this assignment as TIMEOUT if still pending?
+                    
+                    // Recurse: Try next candidate
+                    attemptAssignment(candidates.subList(1, candidates.size()), order, surgeMultiplier);
+                }
+                return null;
+            });
+        }, 15, TimeUnit.SECONDS);
+    }
+
+    private void sendAssignmentRequest(DeliveryPartner rider, Order order, ScoredRider metrics, double surge) {
         DeliveryAssignment assignment = DeliveryAssignment.builder()
                 .order(order)
                 .deliveryPartner(rider)
@@ -71,21 +186,33 @@ public class DispatchService {
                 .assignedAt(LocalDateTime.now())
                 .build();
         deliveryAssignmentRepository.save(assignment);
+        System.out.println("Assignment created for order: " + order.getId());
 
-        // Prepare Payload
+        double payout = pricingService.calculatePayout(metrics.getDistanceKm(), metrics.getDurationMin(), surge);
+
         Map<String, Object> payload = Map.of(
-                "assignmentId", "assign_" + assignment.getId(), // or use real ID
+                "assignmentId", assignment.getId().toString(),
                 "orderId", order.getId(),
                 "restaurantName", order.getRestaurant().getName(),
-                "earnings", 40.0, // Dynamic pricing engine
-                "eta", 10 // from ORS
+                "earnings", payout,
+                "pickupLat", order.getRestaurant().getAddress().getLatitude(),
+                "pickupLng", order.getRestaurant().getAddress().getLongitude(),
+                "distanceKm", metrics.getDistanceKm(),
+                "eta", (int) metrics.getDurationMin()
         );
 
-        // Send via Socket.IO
-        // Assuming client is joined room "rider_{userId}"
         socketIOServer.getRoomOperations("rider_" + rider.getUserId())
                 .sendEvent("assignment_request", payload);
-
-        // Timeout handling would be scheduled here (ScheduledExecutorService)
+    }
+    
+    private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+        double theta = lon1 - lon2;
+        double dist = Math.sin(Math.toRadians(lat1)) * Math.sin(Math.toRadians(lat2)) + 
+                      Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) * Math.cos(Math.toRadians(theta));
+        dist = Math.acos(dist);
+        dist = Math.toDegrees(dist);
+        dist = dist * 60 * 1.1515;
+        dist = dist * 1.609344;
+        return dist;
     }
 }

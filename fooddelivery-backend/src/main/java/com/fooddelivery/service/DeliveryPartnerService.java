@@ -22,6 +22,7 @@ public class DeliveryPartnerService {
     private final DeliveryPartnerRepository deliveryPartnerRepository;
     private final UserRepository userRepository;
     private final CloudinaryService cloudinaryService;
+    private final RedisService redisService;
 
     @Transactional
     public DeliveryPartnerResponse submitApplication(String userId, DeliveryPartnerRequest request,
@@ -90,24 +91,45 @@ public class DeliveryPartnerService {
     public DeliveryPartnerResponse toggleOnlineStatus(String userId, boolean isOnline, Double lat, Double lng) {
         DeliveryPartner partner = deliveryPartnerRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Partner not found"));
-        
-        partner.setOnline(isOnline);
-        if (lat != null) partner.setCurrentLatitude(lat);
-        if (lng != null) partner.setCurrentLongitude(lng);
 
-        return mapToResponse(deliveryPartnerRepository.save(partner));
+        partner.setOnline(isOnline);
+        if (lat != null)
+            partner.setCurrentLatitude(lat);
+        if (lng != null)
+            partner.setCurrentLongitude(lng);
+
+        DeliveryPartner saved = deliveryPartnerRepository.save(partner);
+
+        // Update Redis
+        if (isOnline) {
+            Double currentLat = lat != null ? lat : saved.getCurrentLatitude();
+            Double currentLng = lng != null ? lng : saved.getCurrentLongitude();
+
+            if (currentLat != null && currentLng != null) {
+                redisService.updateRiderLocation(saved.getId(), currentLat, currentLng);
+            }
+        } else {
+            redisService.removeRiderLocation(saved.getId());
+        }
+
+        return mapToResponse(saved);
     }
 
     @Transactional
     public void updateLocation(String userId, Double lat, Double lng) {
         DeliveryPartner partner = deliveryPartnerRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Partner not found"));
-        
+
         partner.setCurrentLatitude(lat);
         partner.setCurrentLongitude(lng);
         deliveryPartnerRepository.save(partner);
+
+        // Update Redis
+        if (partner.isOnline()) {
+            redisService.updateRiderLocation(partner.getId(), lat, lng);
+        }
     }
-    
+
     public DeliveryPartnerResponse getProfile(String userId) {
         DeliveryPartner partner = deliveryPartnerRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Partner not found"));

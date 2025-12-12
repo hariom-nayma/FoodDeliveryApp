@@ -33,4 +33,7 @@ public class DeliveryPartner extends BaseEntity {
     private Double ratingAverage;
     private Integer ratingCount;
     private Integer totalDeliveriesCompleted;
+
+    private Double acceptanceRate; // 0.0 to 1.0
+    private java.time.LocalDateTime lastAssignmentTime;
 }

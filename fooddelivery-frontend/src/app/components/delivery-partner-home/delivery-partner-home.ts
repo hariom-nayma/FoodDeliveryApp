@@ -138,16 +138,20 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
   }
 
   acceptOrder(assignmentId: string) {
-    this.deliveryService.acceptOrder(assignmentId).subscribe(res => {
+    this.deliveryService.respondToAssignment(assignmentId, true).subscribe(res => {
       this.message.set('Order Accepted! 🚀');
-      this.currentOrder.set(res.data);
+      this.currentOrder.set(res.data); // Or fetch active
       this.activeTab.set('active');
-      this.fetchRequests(); // clear from list
+      this.fetchRequests(); 
+    }, err => {
+        this.message.set('Failed to accept: ' + (err.error?.message || 'Unknown error'));
+        this.fetchRequests();
     });
   }
 
   rejectOrder(assignmentId: string) {
-    this.deliveryService.rejectOrder(assignmentId).subscribe(() => {
+    this.deliveryService.respondToAssignment(assignmentId, false).subscribe(() => {
+      this.message.set('Order Rejected ❌');
       this.fetchRequests();
     });
   }
@@ -162,7 +166,8 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
 
   rejectIncoming() {
     if (!this.incomingRequest()) return;
-    // Ideally call reject API
+    const id = this.incomingRequest().assignmentId;
+    this.rejectOrder(id);
     this.incomingRequest.set(null);
   }
 

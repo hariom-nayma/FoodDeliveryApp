@@ -32,6 +32,7 @@ public class OrderService {
     private final PricingService pricingService;
     private final ObjectMapper objectMapper;
     private final UserRepository userRepo;
+    private final DispatchService dispatchService;
 
     @Transactional
     public Order createOrder(String userId, CreateOrderRequest request) {
@@ -143,6 +144,12 @@ public class OrderService {
         if (status == OrderStatus.DELIVERED) {
             order.setDeliveredAt(LocalDateTime.now());
         }
+        
+        // Trigger Dispatch if Cooking
+        if (status == OrderStatus.COOKING) {
+             dispatchService.dispatchOrder(orderId);
+        }
+        
         return orderRepository.save(order);
     }
 
