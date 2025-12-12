@@ -134,75 +134,97 @@ public class DispatchService {
 
     private void attemptAssignment(List<ScoredRider> candidates, Order order, double surgeMultiplier) {
         if (candidates.isEmpty()) {
-            // No more candidates in this batch. 
-            // In a full system, we would Trigger "Expand Radius" event here.
             return;
         }
-        System.out.println("Attempting assignment for order: " + order.getId());
-
+        
         ScoredRider best = candidates.get(0);
         DeliveryPartner rider = best.getRider();
         
-        // Lock to prevent double assignment attempts if multiple threads run
+        // 1. Lock to check and assign
         String lockKey = "order_lock_" + order.getId();
-        if (!redisService.tryLock(lockKey, 15)) {
-             // Failed to acquire lock, another process might be handling this order
-             // For simplify, we just return or log. 
-             // In recursive logic, this might be tricky if we want to retry later.
-             // But if locked, it means we are ALREADY assigning.
+        if (!redisService.tryLock(lockKey, 5)) {
+             // If locked, another thread is working on this order. 
+             // We can abort this specific attempt stack.
              return;
         }
         
-        sendAssignmentRequest(rider, order, best, surgeMultiplier);
-
-        // Schedule check in 10s
-        scheduler.schedule(() -> {
-            // Need new transaction for check
-            transactionTemplate.execute(status -> {
-                // Check if Accepted
-                boolean accepted = deliveryAssignmentRepository.existsByOrderAndStatus(order, "ACCEPTED"); // Simplified check
-                // Note: deliveryAssignmentRepository needs to support `existsByOrderAndStatus` or similar.
-                // Or check Order status directly.
-                System.out.println("Assignment status for order: " + order.getId() + " is: " + accepted);
-                
-                Order currentOrder = orderRepository.findById(order.getId()).orElse(null);
-                if (currentOrder != null && !"ASSIGNED_TO_RIDER".equals(currentOrder.getStatus().name())) {
-                    // Not assigned yet (Rejected or Timeout)
-                    // Mark this assignment as TIMEOUT if still pending?
-                    
-                    // Recurse: Try next candidate
-                    attemptAssignment(candidates.subList(1, candidates.size()), order, surgeMultiplier);
+        boolean assigned = false;
+        try {
+            // 2. Critical Section: Check state and create PENDING assignment
+             assigned = transactionTemplate.execute(status -> {
+                Order freshOrder = orderRepository.findById(order.getId()).orElse(null);
+                if (freshOrder == null || freshOrder.getDeliveryPartner() != null) {
+                    return false; // Already assigned or invalid
                 }
-                return null;
+                
+                // Double check if there is arguably a valid PENDING assignment? 
+                // For simplicity, we assume previous ones are strictly timed out or rejected if we are here.
+                
+                DeliveryAssignment assignment = DeliveryAssignment.builder()
+                        .order(freshOrder)
+                        .deliveryPartner(rider)
+                        .status("PENDING")
+                        .assignedAt(LocalDateTime.now())
+                        .build();
+                deliveryAssignmentRepository.save(assignment);
+                
+                // Send Socket Event
+                double payout = pricingService.calculatePayout(best.getDistanceKm(), best.getDurationMin(), surgeMultiplier);
+                Map<String, Object> payload = Map.of(
+                        "assignmentId", assignment.getId().toString(),
+                        "orderId", freshOrder.getId(),
+                        "restaurantName", freshOrder.getRestaurant().getName(),
+                        "earnings", payout,
+                        "pickupLat", freshOrder.getRestaurant().getAddress().getLatitude(),
+                        "pickupLng", freshOrder.getRestaurant().getAddress().getLongitude(),
+                        "distanceKm", best.getDistanceKm(),
+                        "eta", (int) best.getDurationMin()
+                );
+
+                socketIOServer.getRoomOperations("rider_" + rider.getUserId())
+                        .sendEvent("assignment_request", payload);
+                        
+                return true;
+            });
+        } finally {
+            redisService.unlock(lockKey);
+        }
+
+        if (!assigned) {
+            // If we failed to assign (e.g. order taken), stop.
+            return;
+        }
+
+        // 3. Schedule Async Timeout Check (Outside lock)
+        scheduler.schedule(() -> {
+            transactionTemplate.execute(status -> {
+                 Order currentOrder = orderRepository.findById(order.getId()).orElse(null);
+                 if (currentOrder == null) return null;
+
+                 // Check if THIS specific rider accepted
+                 // We don't have the assignment ID here easily unless we pass it, 
+                 // but checking order.getDeliveryPartner() is the source of truth.
+                 if (currentOrder.getDeliveryPartner() != null) {
+                     // Order is assigned. Success.
+                     return null;
+                 }
+                 
+                 // If not assigned, mark *any* PENDING assignments for this order as TIMED_OUT
+                 List<DeliveryAssignment> allAssignments = deliveryAssignmentRepository.findByOrder(currentOrder);
+                 for (DeliveryAssignment pa : allAssignments) {
+                     if ("PENDING".equalsIgnoreCase(pa.getStatus())) {
+                         pa.setStatus("TIMED_OUT");
+                         pa.setRespondedAt(LocalDateTime.now());
+                         deliveryAssignmentRepository.save(pa);
+                     }
+                 }
+                 
+                 // 4. Recurse to next candidate
+                 // We are in a new thread, so stack is clean.
+                 attemptAssignment(candidates.subList(1, candidates.size()), order, surgeMultiplier);
+                 return null;
             });
         }, 15, TimeUnit.SECONDS);
-    }
-
-    private void sendAssignmentRequest(DeliveryPartner rider, Order order, ScoredRider metrics, double surge) {
-        DeliveryAssignment assignment = DeliveryAssignment.builder()
-                .order(order)
-                .deliveryPartner(rider)
-                .status("PENDING")
-                .assignedAt(LocalDateTime.now())
-                .build();
-        deliveryAssignmentRepository.save(assignment);
-        System.out.println("Assignment created for order: " + order.getId());
-
-        double payout = pricingService.calculatePayout(metrics.getDistanceKm(), metrics.getDurationMin(), surge);
-
-        Map<String, Object> payload = Map.of(
-                "assignmentId", assignment.getId().toString(),
-                "orderId", order.getId(),
-                "restaurantName", order.getRestaurant().getName(),
-                "earnings", payout,
-                "pickupLat", order.getRestaurant().getAddress().getLatitude(),
-                "pickupLng", order.getRestaurant().getAddress().getLongitude(),
-                "distanceKm", metrics.getDistanceKm(),
-                "eta", (int) metrics.getDurationMin()
-        );
-
-        socketIOServer.getRoomOperations("rider_" + rider.getUserId())
-                .sendEvent("assignment_request", payload);
     }
     
     private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {

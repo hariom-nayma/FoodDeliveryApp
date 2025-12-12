@@ -27,7 +27,10 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
   userId = signal<string>(''); // Store userId
 
   locationInterval: Subscription | null = null;
-  requestsInterval: Subscription | null = null;
+  // requestsInterval: Subscription | null = null; // Removed polling as per request
+  timeLeft = signal(0);
+  private timerInterval: any = null;
+
   message = signal('');
 
   ngOnInit() {
@@ -37,15 +40,37 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
     this.socketService.onAssignmentRequest().subscribe(payload => {
       console.log("New Assignment Request:", payload);
       // Play sound if needed
+      this.playSound();
+
       this.incomingRequest.set(payload);
-      // Auto-reject timer (visual)
-      setTimeout(() => {
-        // If still same request, clear it (backend will likely reassign)
-        if (this.incomingRequest() && this.incomingRequest().assignmentId === payload.assignmentId) {
-          this.incomingRequest.set(null);
-        }
-      }, 12000);
+      this.startCountdown(25); // 25 seconds to accept
     });
+  }
+
+  startCountdown(seconds: number) {
+    this.stopCountdown();
+    this.timeLeft.set(seconds);
+
+    this.timerInterval = setInterval(() => {
+      this.timeLeft.update(t => t - 1);
+      if (this.timeLeft() <= 0) {
+        this.stopCountdown();
+        this.incomingRequest.set(null); // Auto-dismiss
+        // Optional: Auto-reject via API if needed, or just let backend timeout
+      }
+    }, 1000);
+  }
+
+  stopCountdown() {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+  }
+
+  playSound() {
+    const audio = new Audio('assets/notification.mp3'); // Ensure this file exists or use a generic URL
+    audio.play().catch(e => console.log('Audio play failed', e));
   }
 
   refreshProfile() {
@@ -108,16 +133,15 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
       });
     });
 
-    // Poll Requests every 10s (Keep this for now as discovery mechanism)
+    // Removed polling requestsInterval as requested
+    // Initial fetch
     this.fetchRequests();
-    this.requestsInterval = interval(10000).subscribe(() => {
-      if (this.activeTab() === 'requests') this.fetchRequests();
-    });
   }
 
   stopBackgroundTasks() {
     if (this.locationInterval) this.locationInterval.unsubscribe();
-    if (this.requestsInterval) this.requestsInterval.unsubscribe();
+    // if (this.requestsInterval) this.requestsInterval.unsubscribe();
+    this.stopCountdown();
   }
 
   ngOnDestroy() {
@@ -138,14 +162,16 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
   }
 
   acceptOrder(assignmentId: string) {
+    this.stopCountdown();
     this.deliveryService.respondToAssignment(assignmentId, true).subscribe(res => {
       this.message.set('Order Accepted! 🚀');
       this.currentOrder.set(res.data); // Or fetch active
       this.activeTab.set('active');
-      this.fetchRequests(); 
+      this.incomingRequest.set(null); // Clear popup
+      this.fetchRequests();
     }, err => {
-        this.message.set('Failed to accept: ' + (err.error?.message || 'Unknown error'));
-        this.fetchRequests();
+      this.message.set('Failed to accept: ' + (err.error?.message || 'Unknown error'));
+      this.fetchRequests();
     });
   }
 

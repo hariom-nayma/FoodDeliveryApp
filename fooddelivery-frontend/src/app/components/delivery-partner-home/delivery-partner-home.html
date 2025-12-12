@@ -202,46 +202,66 @@
 
     </div>
     <!-- Incoming Assignment Modal -->
-    <div *ngIf="incomingRequest()" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div class="bg-white rounded-lg shadow-2xl w-full max-w-sm p-6 transform transition-all scale-100 animate-pulse-soft">
+    <div *ngIf="incomingRequest()" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-fade-in-up">
         
-        <div class="text-center mb-6">
-          <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-600 mb-4 animate-bounce">
-            <span class="text-3xl">🔔</span>
-          </div>
-          <h2 class="text-2xl font-bold text-gray-900">New Delivery!</h2>
-          <p class="text-gray-500">You have a new request nearby</p>
-        </div>
-
-        <div class="border-t border-b border-gray-100 py-4 mb-6 space-y-3">
-          <div class="flex justify-between items-center">
-             <span class="text-gray-600">Restaurant</span>
-             <span class="font-bold text-gray-900">{{ incomingRequest().restaurantName }}</span>
-          </div>
-          <div class="flex justify-between items-center">
-             <span class="text-gray-600">Earnings</span>
-             <span class="font-bold text-green-600 text-lg">₹{{ incomingRequest().earnings }}</span>
-          </div>
-          <div class="flex justify-between items-center">
-             <span class="text-gray-600">Dist to Pickup</span>
-             <span class="font-bold text-blue-600">2.1 km</span> <!-- Mock/Calc -->
-          </div>
-        </div>
-
-        <div class="flex space-x-3">
-           <button (click)="rejectIncoming()" class="flex-1 bg-gray-200 text-gray-700 font-bold py-3 rounded-lg hover:bg-gray-300">
-             Reject
-           </button>
-           <button (click)="acceptIncoming()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 shadow-lg">
-             Accept Request
-           </button>
-        </div>
-        
-        <div class="mt-4 text-center">
-             <div class="w-full bg-gray-200 rounded-full h-1.5">
-                <div class="bg-blue-600 h-1.5 rounded-full" style="width: 100%; transition: width 12s linear;"></div>
+        <!-- Header with Map/Icon placeholder -->
+        <div class="bg-gray-50 p-6 flex flex-col items-center justify-center border-b border-gray-100 relative overflow-hidden">
+             <!-- Pulse Circle Background -->
+             <div class="absolute inset-0 flex items-center justify-center opacity-10">
+                 <div class="w-64 h-64 bg-blue-400 rounded-full animate-ping"></div>
              </div>
-             <p class="text-xs text-gray-400 mt-2">Auto-rejecting in 12s...</p>
+
+             <div class="relative z-10 w-20 h-20 bg-white rounded-full shadow flex items-center justify-center mb-3">
+                 <span class="text-4xl animate-bounce">🛵</span>
+             </div>
+             <h2 class="text-xl font-bold text-gray-900">New Request</h2>
+             <p class="text-sm text-gray-500">{{ incomingRequest().restaurantName }}</p>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <!-- Earnings -->
+            <div class="flex flex-col items-center">
+                <span class="text-sm text-gray-500 uppercase tracking-wide">Huge Earnings</span>
+                <span class="text-4xl font-extrabold text-green-600 mt-1">₹{{ incomingRequest().earnings | number:'1.0-0' }}</span>
+                <span class="text-xs text-gray-400 mt-1">Including base pay + incentives</span>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-blue-50 p-3 rounded-xl text-center">
+                    <p class="text-xs text-blue-500 uppercase font-bold">Pickup</p>
+                    <p class="text-lg font-bold text-gray-800">{{ incomingRequest().distanceKm | number:'1.1-1' }} km</p>
+                </div>
+                <div class="bg-orange-50 p-3 rounded-xl text-center">
+                    <p class="text-xs text-orange-500 uppercase font-bold">Drop ETA</p>
+                    <p class="text-lg font-bold text-gray-800">{{ incomingRequest().eta }} min</p>
+                </div>
+            </div>
+
+            <!-- Countdown Bar -->
+            <div class="space-y-2">
+                <div class="flex justify-between text-xs font-bold text-gray-500">
+                    <span>Auto-rejecting...</span>
+                    <span class="text-red-500">{{ timeLeft() }}s</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div class="bg-gradient-to-r from-blue-500 to-indigo-600 h-full transition-all duration-1000 ease-linear"
+                         [style.width.%]="(timeLeft() / 20) * 100"></div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="grid grid-cols-2 gap-3 pt-2">
+               <button (click)="rejectIncoming()" 
+                       class="py-3.5 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+                 Reject
+               </button>
+               <button (click)="acceptIncoming()" 
+                       class="py-3.5 rounded-xl font-bold text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg shadow-green-200 transform active:scale-95 transition-all">
+                 Accept Request
+               </button>
+            </div>
         </div>
 
       </div>

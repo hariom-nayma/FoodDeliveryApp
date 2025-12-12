@@ -47,8 +47,14 @@ public class RedisService {
                 .map(geoResult -> geoResult.getContent().getName())
                 .collect(Collectors.toList());
     }
+
     public boolean tryLock(String key, long timeoutSeconds) {
-        Boolean success = redisTemplate.opsForValue().setIfAbsent(key, "LOCKED", java.time.Duration.ofSeconds(timeoutSeconds));
+        Boolean success = redisTemplate.opsForValue().setIfAbsent(key, "LOCKED",
+                java.time.Duration.ofSeconds(timeoutSeconds));
         return Boolean.TRUE.equals(success);
+    }
+
+    public void unlock(String key) {
+        redisTemplate.delete(key);
     }
 }

@@ -12,6 +12,8 @@ public interface DeliveryAssignmentRepository extends JpaRepository<DeliveryAssi
     Optional<DeliveryAssignment> findByOrderAndStatus(Order order, String status);
 
     boolean existsByOrderAndStatus(com.fooddelivery.entity.Order order, String status);
-    
+
     java.util.List<DeliveryAssignment> findByDeliveryPartner_IdAndStatus(String partnerId, String status);
+
+    java.util.List<DeliveryAssignment> findByOrder(Order order);
 }
