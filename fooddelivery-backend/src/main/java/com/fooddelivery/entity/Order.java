@@ -38,6 +38,7 @@ public class Order extends BaseEntity {
     @JoinColumn(name = "delivery_partner_id")
     private DeliveryPartner deliveryPartner;
 
+    @jakarta.persistence.Column(columnDefinition = "TEXT")
     private String deliveryAddressJson;
 
     @Enumerated(EnumType.STRING)

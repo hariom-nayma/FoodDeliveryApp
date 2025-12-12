@@ -1,6 +1,7 @@
 import { Component, effect, inject, signal, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DeliveryPartnerService } from '../../core/services/delivery-partner.service';
+import { SocketService } from '../../core/services/socket.service';
 import { interval, Subscription } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 
@@ -13,14 +14,17 @@ import { switchMap } from 'rxjs/operators';
 })
 export class DeliveryPartnerHome implements OnInit, OnDestroy {
   private deliveryService = inject(DeliveryPartnerService);
+  private socketService = inject(SocketService); // Inject SocketService
 
   isOnline = signal(false);
   activeTab = signal<'requests' | 'active' | 'history' | 'earnings'>('requests');
 
   requests = signal<any[]>([]);
+  incomingRequest = signal<any>(null); // Real-time popup request
   currentOrder = signal<any>(null); // Simplified for single active order
   history = signal<any[]>([]);
   earnings = signal<any>(null);
+  userId = signal<string>(''); // Store userId
 
   locationInterval: Subscription | null = null;
   requestsInterval: Subscription | null = null;
@@ -28,6 +32,20 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.refreshProfile();
+
+    // Listen for Real-time Requests
+    this.socketService.onAssignmentRequest().subscribe(payload => {
+      console.log("New Assignment Request:", payload);
+      // Play sound if needed
+      this.incomingRequest.set(payload);
+      // Auto-reject timer (visual)
+      setTimeout(() => {
+        // If still same request, clear it (backend will likely reassign)
+        if (this.incomingRequest() && this.incomingRequest().assignmentId === payload.assignmentId) {
+          this.incomingRequest.set(null);
+        }
+      }, 12000);
+    });
   }
 
   refreshProfile() {
@@ -37,6 +55,11 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
         this.startBackgroundTasks();
       }
       this.checkForActiveOrders();
+
+      // Join Room
+      if (res.data.userId) { // Ensure profile returns userId
+        this.socketService.joinRiderRoom(res.data.userId);
+      }
     });
   }
 
@@ -76,14 +99,16 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
   }
 
   startBackgroundTasks() {
-    // Poll Location every 15s
+    // Poll Location every 15s via Socket
     this.locationInterval = interval(15000).subscribe(() => {
+      if (!this.userId()) return; // Wait for userId
       navigator.geolocation.getCurrentPosition(pos => {
-        this.deliveryService.updateLocation(pos.coords.latitude, pos.coords.longitude).subscribe();
+        // Socket Emission instead of API Call
+        this.socketService.emitLocation(this.userId(), pos.coords.latitude, pos.coords.longitude);
       });
     });
 
-    // Poll Requests every 15s
+    // Poll Requests every 10s (Keep this for now as discovery mechanism)
     this.fetchRequests();
     this.requestsInterval = interval(10000).subscribe(() => {
       if (this.activeTab() === 'requests') this.fetchRequests();
@@ -125,6 +150,20 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
     this.deliveryService.rejectOrder(assignmentId).subscribe(() => {
       this.fetchRequests();
     });
+  }
+
+  // Real-time Popup Actions
+  acceptIncoming() {
+    if (!this.incomingRequest()) return;
+    const id = this.incomingRequest().assignmentId;
+    this.acceptOrder(id);
+    this.incomingRequest.set(null);
+  }
+
+  rejectIncoming() {
+    if (!this.incomingRequest()) return;
+    // Ideally call reject API
+    this.incomingRequest.set(null);
   }
 
   markPickedUp() {
