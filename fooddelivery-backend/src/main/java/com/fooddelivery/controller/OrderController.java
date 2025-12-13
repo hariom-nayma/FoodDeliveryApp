@@ -44,7 +44,7 @@ public class OrderController {
     public ResponseEntity<ApiResponse<Order>> confirmPayment(@PathVariable String id,
             @RequestBody PaymentConfirmationRequest request) {
         return ResponseEntity.ok(ApiResponse.success("Payment confirmed. Order placed successfully.",
-                orderService.confirmPayment(id, request.getPaymentId())));
+                orderService.confirmPayment(id, request.getPaymentId(), request.getSignature())));
     }
 
     @PatchMapping("/{id}/accept")

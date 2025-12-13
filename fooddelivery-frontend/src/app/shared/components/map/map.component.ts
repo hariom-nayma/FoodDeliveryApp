@@ -22,8 +22,38 @@ export class MapComponent {
   private map!: L.Map;
   private marker?: L.Marker;
   private routeLayer?: L.Polyline;
+  private markerGroup?: L.FeatureGroup;
 
   constructor(private host: ElementRef) { }
+
+  public updateMarkers(markers: { lat: number, lng: number, title?: string, icon?: string }[]) {
+    if (!this.map) return;
+    
+    // Clear existing
+    if (this.markerGroup) {
+      this.markerGroup.clearLayers();
+      this.markerGroup.removeFrom(this.map);
+    }
+    
+    this.markerGroup = L.featureGroup();
+    
+    markers.forEach(m => {
+        const options: L.MarkerOptions = {};
+        if (m.icon) {
+          options.icon = L.icon({
+            iconUrl: m.icon,
+            iconSize: [40, 40],
+            iconAnchor: [20, 40],
+            popupAnchor: [0, -40]
+          });
+        }
+        const marker = L.marker([m.lat, m.lng], options);
+        if (m.title) marker.bindPopup(m.title);
+        marker.addTo(this.markerGroup!);
+    });
+    
+    this.markerGroup.addTo(this.map);
+  }
 
   public drawRoute(encodedPolyline: string) {
     if (!this.map) return;

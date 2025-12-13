@@ -60,6 +60,10 @@ public class Order extends BaseEntity {
     private Double totalAmount;
 
     private String offerAppliedCode;
+    
+    // Razorpay Fields
+    private String razorpayOrderId;
+    private String paymentId;
 
     private LocalDateTime estimatedDeliveryTime;
     private LocalDateTime deliveredAt;

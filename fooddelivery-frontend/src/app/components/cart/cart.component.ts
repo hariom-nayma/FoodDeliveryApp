@@ -205,15 +205,65 @@ export class CartComponent implements OnInit {
 
         this.orderService.createOrder(cartId, this.selectedAddressId(), this.paymentMethod()).subscribe({
             next: (order) => {
-                this.placingOrder.set(false);
-                this.cartService.cart.set(null); // Clear local cart state
-                alert('Order Placed Successfully! 🎉');
-                this.router.navigate(['/orders', order.id]);
+                if (order.razorpayOrderId) {
+                    this.initRazorpay(order);
+                } else {
+                    this.finalizeOrder(order.id);
+                }
             },
             error: (err) => {
                 this.placingOrder.set(false);
                 alert('Failed to place order. Please try again.');
             }
         });
+    }
+
+    finalizeOrder(orderId: string) {
+        this.placingOrder.set(false);
+        this.cartService.cart.set(null); // Clear local cart state
+        alert('Order Placed Successfully! 🎉');
+        this.router.navigate(['/orders', orderId]);
+    }
+
+    initRazorpay(order: any) {
+        const options = {
+            key: 'rzp_test_RkLdNNDedmJSMf',
+            amount: order.totalAmount * 100,
+            currency: 'INR',
+            name: 'Food Delivery App',
+            description: 'Order Payment',
+            order_id: order.razorpayOrderId,
+            handler: (response: any) => {
+                this.verifyPayment(order.id, response);
+            },
+            prefill: {
+                name: 'Guest', // Could fetch from profile if available
+                contact: '9999999999' // Placeholder or fetch
+            },
+            theme: {
+                color: '#e23744'
+            }
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
+
+        rzp.on('payment.failed', (response: any) => {
+            this.placingOrder.set(false);
+            alert('Payment Failed: ' + response.error.description);
+        });
+    }
+
+    verifyPayment(orderId: string, response: any) {
+        this.orderService.confirmPayment(orderId, response.razorpay_payment_id, response.razorpay_signature)
+            .subscribe({
+                next: (res) => {
+                    this.finalizeOrder(orderId);
+                },
+                error: (err) => {
+                    this.placingOrder.set(false);
+                    alert('Payment Verification Failed');
+                }
+            });
     }
 }

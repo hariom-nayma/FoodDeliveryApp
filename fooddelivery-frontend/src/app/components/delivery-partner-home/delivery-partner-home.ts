@@ -191,6 +191,19 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
 
     if (toLat && toLng) {
       console.log('DeliveryPartnerHome: calling getRoute', fromLat, fromLng, toLat, toLng);
+      
+      const markers = [
+          { lat: fromLat, lng: fromLng, title: 'You', icon: 'assets/deliveryman-marker.png' }
+      ];
+
+      if (order.status === 'ASSIGNED_TO_RIDER') {
+          markers.push({ lat: toLat, lng: toLng, title: order.restaurantName, icon: 'assets/restaurant-marker.png' });
+      } else {
+          markers.push({ lat: toLat, lng: toLng, title: 'Customer', icon: 'assets/deliverlocation-marker.png' });
+      }
+
+      this.mapComponent.updateMarkers(markers);
+
       this.navigationService.getRoute(fromLat, fromLng, toLat, toLng).subscribe({
         next: (res) => {
           console.log('Route Response:', res);

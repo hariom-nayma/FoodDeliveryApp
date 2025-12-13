@@ -14,6 +14,14 @@ export class OrderService {
         return this.http.post<any>(`${this.apiUrl}/create`, { cartId, deliveryAddressId: addressId, paymentMethod }).pipe(map(res => res.data));
     }
 
+    confirmPayment(orderId: string, paymentId: string, signature: string): Observable<any> {
+        return this.http.post<any>(`${this.apiUrl}/${orderId}/confirm-payment`, {
+            paymentId,
+            paymentGatewayOrderId: paymentId, // Optional, can confirm usage
+            signature
+        }).pipe(map(res => res.data));
+    }
+
     getMyOrders(): Observable<any[]> {
         return this.http.get<any>(`${this.apiUrl}/my`).pipe(map(res => res.data));
     }

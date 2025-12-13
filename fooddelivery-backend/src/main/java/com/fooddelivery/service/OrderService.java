@@ -33,6 +33,7 @@ public class OrderService {
     private final ObjectMapper objectMapper;
     private final UserRepository userRepo;
     private final DispatchService dispatchService;
+    private final PaymentService paymentService;
 
     @Transactional
     public Order createOrder(String userId, CreateOrderRequest request) {
@@ -92,6 +93,13 @@ public class OrderService {
                 .deliveryAddressJson(addressJson) // Storing full snapshot
                 .build();
 
+        // RAZORPAY INTEGRATION
+        if ("ONLINE".equalsIgnoreCase(request.getPaymentMethod())) {
+            String rzpOrderId = paymentService.createOrder(order.getTotalAmount(),
+                    "order_" + System.currentTimeMillis());
+            order.setRazorpayOrderId(rzpOrderId);
+        }
+
         Order savedOrder = orderRepository.save(order);
 
         // 3. Save Items
@@ -124,14 +132,22 @@ public class OrderService {
     }
 
     @Transactional
-    public Order confirmPayment(String orderId, String paymentId) {
+    public Order confirmPayment(String orderId, String paymentId, String signature) {
         Order order = getOrder(orderId);
         if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
             throw new RuntimeException("Order not in pending payment state");
         }
+
+        // Verify Signature
+        boolean isValid = paymentService.verifyPayment(order.getRazorpayOrderId(), paymentId, signature);
+        if (!isValid) {
+            throw new RuntimeException("Payment Verification Failed");
+        }
+
         order.setPaymentStatus(PaymentStatus.PAID);
         order.setStatus(OrderStatus.PLACED);
-        // Save payment ID logic if field exists
+        order.setPaymentId(paymentId);
+
         return orderRepository.save(order);
     }
 
@@ -144,12 +160,12 @@ public class OrderService {
         if (status == OrderStatus.DELIVERED) {
             order.setDeliveredAt(LocalDateTime.now());
         }
-        
+
         // Trigger Dispatch if Cooking
         if (status == OrderStatus.COOKING) {
-             dispatchService.dispatchOrder(orderId);
+            dispatchService.dispatchOrder(orderId);
         }
-        
+
         return orderRepository.save(order);
     }
 
