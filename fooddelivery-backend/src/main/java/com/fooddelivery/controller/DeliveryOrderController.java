@@ -33,6 +33,7 @@ public class DeliveryOrderController {
     private final DeliveryPartnerRepository deliveryPartnerRepository;
     private final DeliveryAssignmentRepository deliveryAssignmentRepository;
     private final UserRepository userRepository;
+    private final com.fooddelivery.service.DispatchService dispatchService;
 
     private String getUserId(UserDetails userDetails) {
         return userRepository.findByEmail(userDetails.getUsername()).orElseThrow().getId();
@@ -127,12 +128,94 @@ public class DeliveryOrderController {
             order.setStatus(OrderStatus.ASSIGNED_TO_RIDER);
             orderRepository.save(order);
 
-            return ResponseEntity.ok(ApiResponse.success("Order Accepted", Map.of("status", "ACCEPTED")));
+            // Return FULL order details for frontend
+            Map<String, Object> response = mapOrderToResponse(order);
+            dispatchService.sendOrderUpdate(assignment.getDeliveryPartner().getUserId(), response);
+            return ResponseEntity.ok(ApiResponse.success("Order Accepted", response));
         } else {
             assignment.setStatus("REJECTED");
             deliveryAssignmentRepository.save(assignment);
             return ResponseEntity.ok(ApiResponse.success("Order Rejected", Map.of("status", "REJECTED")));
         }
+    }
+
+    // ... (markPickedUp, markDelivered remain same)
+
+    @GetMapping("/active")
+    @PreAuthorize("hasRole('DELIVERY_PARTNER')")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getActiveOrders(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        String userId = getUserId(userDetails);
+        var partner = deliveryPartnerRepository.findByUserId(userId).orElseThrow();
+        System.out.println("DEBUG: Fetching active orders for partner: " + partner.getId());
+
+        // Debug: Print all orders for this partner
+        List<Order> allPartnerOrders = orderRepository.findAll().stream()
+             .filter(o -> o.getDeliveryPartner() != null && o.getDeliveryPartner().getId().equals(partner.getId()))
+             .collect(Collectors.toList());
+        
+        System.out.println("DEBUG: Total orders for partner: " + allPartnerOrders.size());
+        allPartnerOrders.forEach(o -> System.out.println("DEBUG: Order " + o.getId() + " Status: " + o.getStatus()));
+
+        List<Order> orders = allPartnerOrders.stream()
+                .filter(o -> o.getStatus() == OrderStatus.ASSIGNED_TO_RIDER || o.getStatus() == OrderStatus.PICKED_UP)
+                .collect(Collectors.toList());
+        
+        System.out.println("DEBUG: Filtered active orders: " + orders.size());
+
+        List<Map<String, Object>> response = orders.stream()
+                .map(this::mapOrderToResponse)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(ApiResponse.success("Active orders fetched", response));
+    }
+
+    private Map<String, Object> mapOrderToResponse(Order order) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("orderId", order.getId());
+        map.put("restaurantName", order.getRestaurant().getName());
+        map.put("status", order.getStatus());
+        map.put("customerName", order.getUser().getName());
+        map.put("customerPhone", order.getUser().getPhone());
+
+        // Locations
+        try {
+            if (order.getRestaurant().getAddress() != null) {
+                map.put("pickupLocation", Map.of(
+                        "lat", order.getRestaurant().getAddress().getLatitude(),
+                        "lng", order.getRestaurant().getAddress().getLongitude(),
+                        "address", order.getRestaurant().getAddress().getState() + ", "
+                                + order.getRestaurant().getAddress().getCity()));
+            } else {
+                 System.out.println("DEBUG: Restaurant address is NULL for order " + order.getId());
+            }
+
+            // Delivery Location Parsing
+            String deliveryAddrJson = order.getDeliveryAddressJson();
+            if (deliveryAddrJson != null) {
+                try {
+                    com.fasterxml.jackson.databind.JsonNode addrNode = new com.fasterxml.jackson.databind.ObjectMapper()
+                            .readTree(deliveryAddrJson);
+                    map.put("dropLocation", Map.of(
+                            "lat", addrNode.path("latitude").asDouble(),
+                            "lng", addrNode.path("longitude").asDouble(),
+                            "address", addrNode.path("address").asText()));
+                } catch (Exception e) {
+                    map.put("dropLocation", Map.of("raw", deliveryAddrJson));
+                    System.out.println("DEBUG: Failed to parse delivery address JSON: " + e.getMessage());
+                }
+            } else {
+                System.out.println("DEBUG: Delivery address JSON is NULL for order " + order.getId());
+            }
+        } catch (Exception e) {
+            System.out.println("DEBUG: Error mapping locations: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        System.out.println("DEBUG: Mapped Order Response: " + map); // Log the final map
+
+        map.put("earnings", 35);
+        return map;
     }
 
     @PatchMapping("/{orderId}/picked-up")
@@ -141,7 +224,13 @@ public class DeliveryOrderController {
         Order order = orderRepository.findById(orderId).orElseThrow();
         order.setStatus(OrderStatus.PICKED_UP);
         orderRepository.save(order);
-        return ResponseEntity.ok(ApiResponse.success("Order picked up", Map.of("status", "PICKED_UP")));
+        
+        Map<String, Object> response = mapOrderToResponse(order);
+        if (order.getDeliveryPartner() != null) {
+            dispatchService.sendOrderUpdate(order.getDeliveryPartner().getUserId(), response);
+        }
+        
+        return ResponseEntity.ok(ApiResponse.success("Order picked up", response));
     }
 
     @PatchMapping("/{orderId}/delivered")
@@ -151,7 +240,15 @@ public class DeliveryOrderController {
         order.setStatus(OrderStatus.DELIVERED);
         order.setDeliveredAt(LocalDateTime.now());
         orderRepository.save(order);
-        return ResponseEntity.ok(ApiResponse.success("Order delivered", Map.of("status", "DELIVERED")));
+        
+        // Final update (or removal)
+        // Ideally we might want to clear the active order on frontend
+        Map<String, Object> response = mapOrderToResponse(order); // Status DELIVERED
+        if (order.getDeliveryPartner() != null) {
+            dispatchService.sendOrderUpdate(order.getDeliveryPartner().getUserId(), response);
+        }
+        
+        return ResponseEntity.ok(ApiResponse.success("Order delivered", response));
     }
 
     @GetMapping("/history")
@@ -178,51 +275,5 @@ public class DeliveryOrderController {
 
         return ResponseEntity.ok(ApiResponse.success("Order history fetched", res));
     }
-
-    @GetMapping("/active")
-    @PreAuthorize("hasRole('DELIVERY_PARTNER')")
-    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getActiveOrders(
-            @AuthenticationPrincipal UserDetails userDetails) {
-        String userId = getUserId(userDetails);
-        var partner = deliveryPartnerRepository.findByUserId(userId).orElseThrow();
-
-        List<Order> orders = orderRepository.findAll().stream()
-                .filter(o -> o.getDeliveryPartner() != null
-                        && o.getDeliveryPartner().getId().equals(partner.getId())
-                        && (o.getStatus() == OrderStatus.ASSIGNED_TO_RIDER || o.getStatus() == OrderStatus.PICKED_UP))
-                .collect(Collectors.toList());
-
-        List<Map<String, Object>> response = orders.stream().map(order -> {
-            Map<String, Object> map = new HashMap<>();
-            map.put("orderId", order.getId());
-            map.put("restaurantName", order.getRestaurant().getName());
-            map.put("status", order.getStatus());
-            map.put("customerName", order.getUser().getName());
-            map.put("customerPhone", order.getUser().getPhone());
-
-            // Locations
-            try {
-                if (order.getRestaurant().getAddress() != null) {
-                    map.put("pickupLocation", Map.of(
-                            "lat", order.getRestaurant().getAddress().getLatitude(),
-                            "lng", order.getRestaurant().getAddress().getLongitude(),
-                            "address", order.getRestaurant().getAddress().getState() + ", "
-                                    + order.getRestaurant().getAddress().getCity()));
-                }
-
-                // Delivery Location Parsing (Basic)
-                String deliveryAddrJson = order.getDeliveryAddressJson();
-                if (deliveryAddrJson != null && deliveryAddrJson.contains("latitude")) {
-                    map.put("dropLocation", Map.of("raw", deliveryAddrJson)); // Frontend can parse or we can reuse
-                                                                              // Service logic
-                }
-            } catch (Exception e) {
-            }
-
-            map.put("earnings", 35);
-            return map;
-        }).collect(Collectors.toList());
-
-        return ResponseEntity.ok(ApiResponse.success("Active orders fetched", response));
-    }
 }
+    

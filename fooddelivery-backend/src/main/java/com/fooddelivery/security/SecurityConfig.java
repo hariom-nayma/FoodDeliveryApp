@@ -32,6 +32,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/location/**").permitAll()
                         .requestMatchers("/api/v1/restaurants/**").permitAll()
                         .requestMatchers("/api/v1/menu-items/**").permitAll()
+                        .requestMatchers("/api/v1/navigation/**").authenticated()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

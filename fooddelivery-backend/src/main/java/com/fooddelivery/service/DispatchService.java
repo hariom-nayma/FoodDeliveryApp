@@ -237,4 +237,11 @@ public class DispatchService {
         dist = dist * 1.609344;
         return dist;
     }
+
+    public void sendOrderUpdate(String riderUserId, Map<String, Object> orderData) {
+        if (socketIOServer.getRoomOperations("rider_" + riderUserId) != null) {
+            socketIOServer.getRoomOperations("rider_" + riderUserId).sendEvent("order_update", orderData);
+            System.out.println("Sent order update to rider_" + riderUserId);
+        }
+    }
 }

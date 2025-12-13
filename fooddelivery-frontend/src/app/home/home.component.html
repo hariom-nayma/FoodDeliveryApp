@@ -2,10 +2,16 @@
     <h1>Restaurants Nearby @if(detectedCity()) { in {{ detectedCity() }} }</h1>
 
     <div class="mb-4 text-gray-600">
-        {{ locationStatus() }} 
+        {{ locationStatus() }}
         @if(locationStatus() === 'Location access denied') {
-            <button class="ml-2 text-blue-500 underline" (click)="detectLocation()">Retry</button>
+        <button class="ml-2 text-blue-500 underline" (click)="detectLocation()">Retry</button>
         }
+    </div>
+
+    <div class="search-container">
+        <input type="text" class="search-input" placeholder="Enter city name (e.g. Bangalore, Mumbai)"
+            [ngModel]="searchCity()" (ngModelChange)="searchCity.set($event)" (keyup.enter)="onSearch()">
+        <button class="search-button" (click)="onSearch()">Search</button>
     </div>
 
     @if (loading()) {

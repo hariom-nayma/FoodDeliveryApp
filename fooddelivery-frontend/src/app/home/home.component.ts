@@ -1,12 +1,13 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { Restaurant, RestaurantService } from '../core/services/restaurant.service';
 import { GeocodingService } from '../core/services/geocoding.service';
 
 @Component({
     selector: 'app-home',
     standalone: true,
-    imports: [RouterLink],
+    imports: [RouterLink, FormsModule],
     templateUrl: './home.component.html',
     styleUrl: './home.component.css'
 })
@@ -18,9 +19,23 @@ export class HomeComponent implements OnInit {
     loading = signal(true);
     locationStatus = signal<string>('Detecting location...');
     detectedCity = signal<string | null>(null);
+    searchCity = signal<string>('');
 
     ngOnInit() {
         this.detectLocation();
+    }
+
+    onSearch() {
+        const city = this.searchCity().trim();
+        if (city) {
+            this.locationStatus.set(`Searching for: ${city}`);
+            this.detectedCity.set(city);
+            this.loadRestaurants(city);
+        } else {
+            // If empty, maybe re-detect or show all? 
+            // For now let's just re-detect location or show all
+            this.detectLocation();
+        }
     }
 
     detectLocation() {
@@ -40,6 +55,7 @@ export class HomeComponent implements OnInit {
                     next: (addr) => {
                         const city = addr.city || addr.state || ''; // Fallback
                         this.detectedCity.set(city);
+                        this.searchCity.set(city); // Sync search bar
                         this.locationStatus.set(`Location: ${city}`);
                         this.loadRestaurants(city);
                     },

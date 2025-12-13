@@ -1,7 +1,7 @@
 import { Component, Input, Output, EventEmitter, ElementRef, ViewEncapsulation } from '@angular/core';
 import * as L from 'leaflet';
 import { CommonModule } from '@angular/common';
-
+import * as polyline from 'polyline';
 @Component({
   selector: 'app-map',
   standalone: true,
@@ -16,15 +16,35 @@ export class MapComponent {
   @Input() markers: { lat: number, lng: number, title?: string, icon?: string }[] = [];
 
   @Output() locationSelected = new EventEmitter<{ lat: number; lng: number, accuracy: number | null }>();
+  @Output() mapReady = new EventEmitter<void>();
 
   public mapId = 'map-' + Math.random().toString(36).substring(2, 9);
   private map!: L.Map;
   private marker?: L.Marker;
+  private routeLayer?: L.Polyline;
 
   constructor(private host: ElementRef) { }
 
+  public drawRoute(encodedPolyline: string) {
+    if (!this.map) return;
+
+    try {
+      const coords = polyline.decode(encodedPolyline).map(([lat, lng]) => [lat, lng] as L.LatLngTuple);
+
+      if (this.routeLayer) {
+        this.map.removeLayer(this.routeLayer);
+      }
+
+      this.routeLayer = L.polyline(coords, { color: 'blue', weight: 4 }).addTo(this.map);
+      this.map.fitBounds(this.routeLayer.getBounds(), { padding: [50, 50] });
+    } catch (e) {
+      console.error('Failed to draw route', e);
+    }
+  }
+
   /** Called manually AFTER dialog is visible */
   public initializeMap() {
+    // ... existing initialization code ...
     if (this.map) this.map.remove(); // prevent duplicates
 
     const element = document.getElementById(this.mapId); // Use document.getElementById for safety
@@ -38,6 +58,7 @@ export class MapComponent {
     }
 
     this.map = L.map(element).setView([this.center.lat, this.center.lng], 14);
+    this.mapReady.emit();
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(this.map);
 

@@ -17,6 +17,10 @@ export class SocketService {
         return this.socket.fromEvent('assignment_request');
     }
 
+    onOrderUpdate(): Observable<any> {
+        return this.socket.fromEvent('order_update');
+    }
+
     // Generic emit/listen
     emit(event: string, payload: any) {
         this.socket.emit(event, payload);
