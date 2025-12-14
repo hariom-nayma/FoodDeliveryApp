@@ -1,287 +1,313 @@
-<div class="min-h-screen bg-gray-50 flex flex-col">
+<div class="dashboard-container">
 
   <!-- Header -->
-  <header class="bg-white shadow">
-    <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
-      <h1 class="text-2xl font-bold text-gray-900">Delivery Dashboard 🛵</h1>
-      <div class="flex items-center space-x-4">
-        <span class="text-sm font-medium" [class.text-green-600]="isOnline()" [class.text-gray-500]="!isOnline()">
-          {{ isOnline() ? 'Online' : 'Offline' }}
-        </span>
-        <button (click)="toggleStatus()" [class.bg-green-600]="!isOnline()" [class.bg-red-600]="isOnline()"
-          class="relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none">
-          <span
-            class="translate-x-0 inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200"
-            [class.translate-x-5]="isOnline()" [class.translate-x-0]="!isOnline()"></span>
-        </button>
+  <header class="dashboard-header">
+    <div class="header-content">
+      <div class="header-left">
+        <h1>Dashboard</h1>
+        <p class="subtitle">{{ isOnline() ? 'Ready for orders' : 'You are offline' }}</p>
       </div>
+
+      <button (click)="toggleStatus()" class="status-toggle" [class.online]="isOnline()" [class.offline]="!isOnline()">
+        <span class="status-indicator"></span>
+        <span class="status-text">{{ isOnline() ? 'Online' : 'Offline' }}</span>
+      </button>
     </div>
   </header>
 
   <!-- Message Toast -->
-  <div *ngIf="message()"
-    class="fixed top-20 right-4 bg-gray-800 text-white px-4 py-2 rounded shadow-lg z-50 animate-bounce">
-    {{ message() }}
+  <div *ngIf="message()" class="toast-notification">
+    <span class="toast-icon">🔔</span>
+    <span class="toast-text">{{ message() }}</span>
   </div>
 
-  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+  <main class="main-content">
 
     <!-- Offline State -->
-    <div *ngIf="!isOnline()" class="text-center py-20">
-      <div class="text-6xl mb-4">😴</div>
-      <h2 class="text-2xl font-semibold text-gray-700">You are Offline</h2>
-      <p class="text-gray-500 mt-2">Go online to start receiving delivery requests.</p>
+    <div *ngIf="!isOnline()" class="offline-state">
+      <div class="offline-icon">😴</div>
+      <h2>You're Offline</h2>
+      <p>Go online to start earning. We'll notify you when new orders arrive nearby.</p>
+      <button (click)="toggleStatus()" class="btn-primary btn-large">Go Online</button>
     </div>
 
     <!-- Online Dashboard -->
-    <div *ngIf="isOnline()">
+    <div *ngIf="isOnline()" class="online-dashboard">
 
-      <!-- Tabs -->
-      <div class="border-b border-gray-200 mb-6">
-        <nav class="-mb-px flex space-x-8">
-          <button (click)="setTab('requests')" [class.border-blue-500]="activeTab() === 'requests'"
-            [class.text-blue-600]="activeTab() === 'requests'"
-            class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors"
-            [class.border-transparent]="activeTab() !== 'requests'" [class.text-gray-500]="activeTab() !== 'requests'">
-            New Requests
-            <span *ngIf="requests().length" class="ml-2 bg-red-100 text-red-600 py-0.5 px-2 rounded-full text-xs">{{
-              requests().length }}</span>
-          </button>
-
-          <button (click)="setTab('active')" [class.border-blue-500]="activeTab() === 'active'"
-            [class.text-blue-600]="activeTab() === 'active'"
-            class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors"
-            [class.border-transparent]="activeTab() !== 'active'" [class.text-gray-500]="activeTab() !== 'active'">
-            Active Order
-            <span *ngIf="currentOrder()"
-              class="ml-2 bg-green-100 text-green-600 py-0.5 px-2 rounded-full text-xs">1</span>
-          </button>
-
-          <button (click)="setTab('history')" [class.border-blue-500]="activeTab() === 'history'"
-            [class.text-blue-600]="activeTab() === 'history'"
-            class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors"
-            [class.border-transparent]="activeTab() !== 'history'" [class.text-gray-500]="activeTab() !== 'history'">
-            History
-          </button>
-
-          <button (click)="setTab('earnings')" [class.border-blue-500]="activeTab() === 'earnings'"
-            [class.text-blue-600]="activeTab() === 'earnings'"
-            class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors"
-            [class.border-transparent]="activeTab() !== 'earnings'" [class.text-gray-500]="activeTab() !== 'earnings'">
-            Earnings
-          </button>
-        </nav>
-      </div>
-
-      <!-- Content: New Requests -->
-      <div *ngIf="activeTab() === 'requests'">
-        <div *ngIf="requests().length === 0" class="text-center py-10 text-gray-500">
-          Searching for orders nearby... 📡
+      <!-- New Requests Tab -->
+      <div *ngIf="activeTab() === 'requests'" class="tab-content">
+        <div class="section-header">
+          <h2>New Requests</h2>
+          <span class="badge-blue">{{ requests().length }} nearby</span>
         </div>
-        <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <div *ngFor="let req of requests()" class="bg-white rounded-lg shadow p-6 border border-gray-100">
-            <div class="flex justify-between items-start mb-4">
-              <h3 class="text-lg font-bold text-gray-900">{{ req.restaurantName }}</h3>
-              <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">₹{{ req.earnings }}</span>
+
+        <div *ngIf="requests().length === 0" class="empty-state">
+          <div class="radar-icon">📡</div>
+          <p class="primary-text">Scanning area...</p>
+          <p class="secondary-text">Stay in high demand areas to get more orders.</p>
+          <div class="scanning-bar">
+            <div class="scanning-line"></div>
+          </div>
+        </div>
+
+        <div class="requests-list">
+          <div *ngFor="let req of requests()" class="request-card">
+            <div class="card-header">
+              <div class="restaurant-info">
+                <h3>{{ req.restaurantName }}</h3>
+                <div class="meta-info">
+                  <span>📍 2.5 km</span> • <span>Fast Food</span>
+                </div>
+              </div>
+              <div class="earnings-badge">
+                <span class="label">Earn</span>
+                <span class="amount">₹{{ req.earnings }}</span>
+              </div>
             </div>
-            <div class="text-sm text-gray-600 mb-4 space-y-2">
-              <p>📍 Pickup: <span class="text-gray-800">2.5 km away</span></p>
-              <p>🏁 Drop: <span class="text-gray-800">5.0 km trip</span></p>
+
+            <div class="trip-details">
+              <div class="detail-item">
+                <span class="label">Trip</span>
+                <span class="value">5.0 km</span>
+              </div>
+              <div class="separator"></div>
+              <div class="detail-item">
+                <span class="label">Est. Time</span>
+                <span class="value">25 min</span>
+              </div>
             </div>
-            <div class="flex space-x-3">
-              <button (click)="rejectOrder(req.assignmentId)"
-                class="flex-1 bg-gray-100 text-gray-700 py-2 rounded hover:bg-gray-200">Reject</button>
-              <button (click)="acceptOrder(req.assignmentId)"
-                class="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 shadow">Accept</button>
+
+            <div class="card-actions">
+              <button (click)="rejectOrder(req.assignmentId)" class="btn-secondary">Decline</button>
+              <button (click)="acceptOrder(req.assignmentId)" class="btn-primary">Accept</button>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Content: Active Order -->
-      <div *ngIf="activeTab() === 'active'">
-        <div *ngIf="!currentOrder()" class="text-center py-10 text-gray-500">
-          No active order. Check "New Requests" tab.
+      <!-- Active Order Tab -->
+      <div *ngIf="activeTab() === 'active'" class="tab-content full-height">
+        <div *ngIf="!currentOrder()" class="empty-state bordered">
+          <div class="icon">📦</div>
+          <h3>No Active Order</h3>
+          <p>Check requests or wait for new ones.</p>
         </div>
-        <div *ngIf="currentOrder()" class="bg-white rounded-xl shadow-lg overflow-hidden max-w-2xl mx-auto">
-          <div class="bg-blue-600 px-6 py-4 text-white flex justify-between items-center">
-            <h3 class="text-lg font-bold">Order #{{ currentOrder().orderId }}</h3>
-            <span class="bg-white/20 px-3 py-1 rounded text-sm">{{ currentOrder().status }}</span>
+
+        <div *ngIf="currentOrder()" class="active-order-card">
+          <!-- Status Banner -->
+          <div class="status-banner">
+            <div class="banner-content">
+              <p class="label">Current Status</p>
+              <h2>{{ currentOrder().status.replace('_', ' ') }}</h2>
+              <p class="order-id">Order #{{ currentOrder().orderId }}</p>
+            </div>
           </div>
 
-          <div class="h-64 w-full relative">
+          <!-- Map Container -->
+          <div class="map-wrapper">
             <app-map [showMarker]="false" (mapReady)="onMapReady()"></app-map>
           </div>
 
-          <div class="p-6">
-            <!-- Stepper -->
-            <div class="flex justify-between items-center mb-8 relative">
-              <div class="w-full absolute top-1/2 border-t-2 border-gray-200 z-0"></div>
+          <!-- Actions Sheet -->
+          <div class="action-sheet">
+            <div class="drag-handle"></div>
 
-              <div class="relative z-10 bg-white px-2">
-                <div class="h-8 w-8 rounded-full flex items-center justify-center text-white text-sm"
-                  [class.bg-green-500]="true">
-                  ✓
-                </div>
-                <p class="text-xs mt-1">Assigned</p>
+            <!-- Stepper -->
+            <div class="stepper">
+              <div class="step">
+                <div class="step-circle completed">✓</div>
+                <span class="step-label">Picked</span>
               </div>
-              <div class="relative z-10 bg-white px-2">
-                <div class="h-8 w-8 rounded-full flex items-center justify-center text-white text-sm"
-                  [class.bg-green-500]="currentOrder().status === 'PICKED_UP' || currentOrder().status === 'DELIVERED'"
-                  [class.bg-gray-300]="currentOrder().status !== 'PICKED_UP' && currentOrder().status !== 'DELIVERED'">
+              <div class="step-line">
+                <div class="progress"
+                  [style.width.%]="currentOrder().status === 'PICKED_UP' || currentOrder().status === 'DELIVERED' ? 100 : 0">
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-circle"
+                  [class.completed]="currentOrder().status === 'PICKED_UP' || currentOrder().status === 'DELIVERED'">
                   {{ currentOrder().status === 'PICKED_UP' || currentOrder().status === 'DELIVERED' ? '✓' : '2' }}
                 </div>
-                <p class="text-xs mt-1">Picked</p>
+                <span class="step-label">On Way</span>
               </div>
-              <div class="relative z-10 bg-white px-2">
-                <div class="h-8 w-8 rounded-full flex items-center justify-center text-white text-sm"
-                  [class.bg-green-500]="currentOrder().status === 'DELIVERED'"
-                  [class.bg-gray-300]="currentOrder().status !== 'DELIVERED'">
+              <div class="step-line">
+                <div class="progress" [style.width.%]="currentOrder().status === 'DELIVERED' ? 100 : 0"></div>
+              </div>
+              <div class="step">
+                <div class="step-circle" [class.completed]="currentOrder().status === 'DELIVERED'">
                   {{ currentOrder().status === 'DELIVERED' ? '✓' : '3' }}
                 </div>
-                <p class="text-xs mt-1">Delivered</p>
+                <span class="step-label">Drop</span>
               </div>
             </div>
 
-            <div class="space-y-4">
+            <div class="sheet-buttons">
               <button *ngIf="currentOrder().status === 'ASSIGNED_TO_RIDER'" (click)="markPickedUp()"
-                class="w-full bg-orange-500 text-white py-3 rounded-lg font-bold hover:bg-orange-600 text-lg shadow-md">
-                Mark Picked Up 📦
+                class="btn-primary btn-block icon-btn">
+                <span>Confirm Pickup</span> ➡️
               </button>
               <button *ngIf="currentOrder().status === 'PICKED_UP'" (click)="markDelivered()"
-                class="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 text-lg shadow-md">
-                Mark Delivered ✅
+                class="btn-success btn-block icon-btn">
+                <span>Confirm Delivery</span> ✅
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Content: History -->
-      <div *ngIf="activeTab() === 'history'">
-        <div *ngIf="history().length === 0" class="text-center py-10 text-gray-500">No history yet.</div>
-        <div class="bg-white shadow overflow-hidden sm:rounded-md">
-          <ul class="divide-y divide-gray-200">
-            <li *ngFor="let h of history()" class="px-4 py-4 sm:px-6">
-              <div class="flex items-center justify-between">
-                <p class="text-sm font-medium text-blue-600 truncate">Order #{{ h.orderId }}</p>
-                <div class="ml-2 flex-shrink-0 flex">
-                  <p class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                    Delivered
-                  </p>
-                </div>
+      <!-- History Tab -->
+      <div *ngIf="activeTab() === 'history'" class="tab-content">
+        <h2 class="section-title">Past Deliveries</h2>
+        <div *ngIf="history().length === 0" class="empty-state small">
+          No history yet. Start driving! 🚗
+        </div>
+        <div class="history-list">
+          <div *ngFor="let h of history()" class="history-item">
+            <div class="history-left">
+              <div class="order-icon">#{{ h.orderId.substring(0,4) }}</div>
+              <div class="order-meta">
+                <p class="date">{{ h.deliveredAt | date:'mediumDate' }}</p>
+                <p class="status">Delivered</p>
               </div>
-              <div class="mt-2 sm:flex sm:justify-between">
-                <div class="sm:flex">
-                  <p class="flex items-center text-sm text-gray-500">
-                    Earnings: ₹{{ h.earning }}
-                  </p>
-                </div>
-                <div class="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                  <p>
-                    {{ h.deliveredAt | date:'short' }}
-                  </p>
-                </div>
-              </div>
-            </li>
-          </ul>
+            </div>
+            <div class="history-right">
+              <p class="earning-amount">+₹{{ h.earning }}</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Content: Earnings -->
-      <div *ngIf="activeTab() === 'earnings'">
-        <div *ngIf="earnings()" class="grid grid-cols-1 gap-5 sm:grid-cols-3">
-          <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-              <dt class="text-sm font-medium text-gray-500 truncate">Total Earnings</dt>
-              <dd class="mt-1 text-3xl font-semibold text-gray-900">₹{{ earnings().totalEarnings }}</dd>
+      <!-- Earnings Tab -->
+      <div *ngIf="activeTab() === 'earnings'" class="tab-content">
+        <h2 class="section-title">Earnings Wallet</h2>
+
+        <!-- Total Card -->
+        <div *ngIf="earnings()" class="wallet-card">
+          <div class="wallet-background"></div>
+          <p class="label">Total Balance</p>
+          <h1 class="balance">₹{{ earnings().totalEarnings | number:'1.0-0' }}</h1>
+
+          <div class="wallet-details">
+            <div class="detail">
+              <p class="label">Completed</p>
+              <p class="value">{{ earnings().ordersCompleted }}</p>
+            </div>
+            <div class="detail">
+              <p class="label">Incentives</p>
+              <p class="value green">+₹{{ earnings().incentives }}</p>
             </div>
           </div>
-          <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-              <dt class="text-sm font-medium text-gray-500 truncate">Orders Completed</dt>
-              <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ earnings().ordersCompleted }}</dd>
-            </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="transactions-card">
+          <div class="card-header-row">
+            <h3>Recent Payouts</h3>
+            <button class="link-btn">See All</button>
           </div>
-          <div class="bg-white overflow-hidden shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-              <dt class="text-sm font-medium text-gray-500 truncate">Incentives</dt>
-              <dd class="mt-1 text-3xl font-semibold text-green-600">+₹{{ earnings().incentives }}</dd>
+          <div class="transaction-list">
+            <div class="transaction-item">
+              <div class="trans-left">
+                <div class="trans-icon">🏦</div>
+                <div>
+                  <p class="trans-title">Bank Transfer</p>
+                  <p class="trans-date">Yesterday</p>
+                </div>
+              </div>
+              <span class="trans-amount">-₹1,250</span>
+            </div>
+            <div class="transaction-item faded">
+              <div class="trans-left">
+                <div class="trans-icon">🏦</div>
+                <div>
+                  <p class="trans-title">Bank Transfer</p>
+                  <p class="trans-date">Tue, 12 Oct</p>
+                </div>
+              </div>
+              <span class="trans-amount">-₹850</span>
             </div>
           </div>
         </div>
       </div>
 
     </div>
+
     <!-- Incoming Assignment Modal -->
-    <div *ngIf="incomingRequest()"
-      class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div
-        class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-fade-in-up">
+    <div *ngIf="incomingRequest()" class="modal-overlay">
+      <div class="modal-content animate-slide-up">
 
-        <!-- Header with Map/Icon placeholder -->
-        <div
-          class="bg-gray-50 p-6 flex flex-col items-center justify-center border-b border-gray-100 relative overflow-hidden">
-          <!-- Pulse Circle Background -->
-          <div class="absolute inset-0 flex items-center justify-center opacity-10">
-            <div class="w-64 h-64 bg-blue-400 rounded-full animate-ping"></div>
-          </div>
-
-          <div class="relative z-10 w-20 h-20 bg-white rounded-full shadow flex items-center justify-center mb-3">
-            <span class="text-4xl animate-bounce">🛵</span>
-          </div>
-          <h2 class="text-xl font-bold text-gray-900">New Request</h2>
-          <p class="text-sm text-gray-500">{{ incomingRequest().restaurantName }}</p>
+        <div class="modal-header">
+          <div class="pulse-bg"></div>
+          <div class="modal-icon">🛵</div>
+          <h2>New Order Request</h2>
+          <p>{{ incomingRequest().restaurantName }}</p>
         </div>
 
-        <div class="p-6 space-y-6">
-          <!-- Earnings -->
-          <div class="flex flex-col items-center">
-            <span class="text-sm text-gray-500 uppercase tracking-wide">Huge Earnings</span>
-            <span class="text-4xl font-extrabold text-green-600 mt-1">₹{{ incomingRequest().earnings | number:'1.0-0'
-              }}</span>
-            <span class="text-xs text-gray-400 mt-1">Including base pay + incentives</span>
+        <div class="modal-body">
+          <div class="earnings-highlight">
+            <span class="amount">₹{{ incomingRequest().earnings | number:'1.0-0' }}</span>
+            <span class="badge-green">High Demand 🔥</span>
           </div>
 
-          <!-- Stats Grid -->
-          <div class="grid grid-cols-2 gap-4">
-            <div class="bg-blue-50 p-3 rounded-xl text-center">
-              <p class="text-xs text-blue-500 uppercase font-bold">Pickup</p>
-              <p class="text-lg font-bold text-gray-800">{{ incomingRequest().distanceKm | number:'1.1-1' }} km</p>
+          <div class="stats-grid">
+            <div class="stat-box">
+              <p class="label">Distance</p>
+              <p class="value">{{ incomingRequest().distanceKm | number:'1.1-1' }} km</p>
             </div>
-            <div class="bg-orange-50 p-3 rounded-xl text-center">
-              <p class="text-xs text-orange-500 uppercase font-bold">Drop ETA</p>
-              <p class="text-lg font-bold text-gray-800">{{ incomingRequest().eta }} min</p>
+            <div class="stat-box">
+              <p class="label">ETA</p>
+              <p class="value">{{ incomingRequest().eta }} min</p>
             </div>
           </div>
 
-          <!-- Countdown Bar -->
-          <div class="space-y-2">
-            <div class="flex justify-between text-xs font-bold text-gray-500">
-              <span>Auto-rejecting...</span>
-              <span class="text-red-500">{{ timeLeft() }}s</span>
+          <!-- Countdown -->
+          <div class="countdown-container">
+            <div class="countdown-labels">
+              <span>Accept within</span>
+              <span class="time">{{ timeLeft() }}s</span>
             </div>
-            <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-              <div class="bg-gradient-to-r from-blue-500 to-indigo-600 h-full transition-all duration-1000 ease-linear"
-                [style.width.%]="(timeLeft() / 20) * 100"></div>
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="(timeLeft() / 25) * 100"></div>
             </div>
           </div>
 
-          <!-- Actions -->
-          <div class="grid grid-cols-2 gap-3 pt-2">
-            <button (click)="rejectIncoming()"
-              class="py-3.5 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
-              Reject
-            </button>
-            <button (click)="acceptIncoming()"
-              class="py-3.5 rounded-xl font-bold text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg shadow-green-200 transform active:scale-95 transition-all">
-              Accept Request
-            </button>
+          <div class="modal-actions">
+            <button (click)="rejectIncoming()" class="btn-secondary btn-large">Decline</button>
+            <button (click)="acceptIncoming()" class="btn-primary btn-large shadow">Accept Order</button>
           </div>
         </div>
-
       </div>
     </div>
 
   </main>
+
+  <!-- Bottom Navigation Bar -->
+  <nav *ngIf="isOnline()" class="bottom-nav">
+    <button (click)="setTab('requests')" class="nav-item" [class.active]="activeTab() === 'requests'">
+      <div class="nav-icon">
+        🏠
+        <span *ngIf="requests().length" class="dot-indicator"></span>
+      </div>
+      <span class="nav-label">Home</span>
+    </button>
+
+    <button (click)="setTab('active')" class="nav-item" [class.active]="activeTab() === 'active'">
+      <div class="nav-icon">
+        🛵
+        <span *ngIf="currentOrder()" class="dot-indicator green animate-ping"></span>
+      </div>
+      <span class="nav-label">Active</span>
+    </button>
+
+    <button (click)="setTab('earnings')" class="nav-item" [class.active]="activeTab() === 'earnings'">
+      <div class="nav-icon">💳</div>
+      <span class="nav-label">Wallet</span>
+    </button>
+
+    <button (click)="setTab('history')" class="nav-item" [class.active]="activeTab() === 'history'">
+      <div class="nav-icon">📜</div>
+      <span class="nav-label">History</span>
+    </button>
+  </nav>
+
 </div>
