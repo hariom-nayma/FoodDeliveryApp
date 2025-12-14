@@ -54,19 +54,25 @@
           },
           "defaultConfiguration": "production"
         },
-        "serve": {
-          "builder": "@angular/build:dev-server",
-          "configurations": {
-            "production": {
-              "buildTarget": "fooddelivery-frontend:build:production"
-            },
-            "development": {
-              "buildTarget": "fooddelivery-frontend:build:development",
-              "proxyConfig": "proxy.conf.json"
-            }
-          },
-          "defaultConfiguration": "development"
-        },
+       "serve": {
+  "builder": "@angular/build:dev-server",
+  "configurations": {
+    "production": {
+      "buildTarget": "fooddelivery-frontend:build:production"
+    },
+    "development": {
+      "buildTarget": "fooddelivery-frontend:build:development",
+      "proxyConfig": "proxy.conf.json",
+      "host": "0.0.0.0",
+      "allowedHosts": [
+        "unperturbedly-intermesenteric-lourie.ngrok-free.dev",
+        ".ngrok-free.dev"
+      ]
+    }
+  },
+  "defaultConfiguration": "development"
+}
+,
         "test": {
           "builder": "@angular/build:unit-test"
         }
