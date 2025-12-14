@@ -1,7 +1,8 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Restaurant, RestaurantService } from '../core/services/restaurant.service';
+import { RestaurantService } from '../core/services/restaurant.service';
+import { Restaurant } from '../core/restaurant/restaurant.types';
 import { GeocodingService } from '../core/services/geocoding.service';
 
 @Component({

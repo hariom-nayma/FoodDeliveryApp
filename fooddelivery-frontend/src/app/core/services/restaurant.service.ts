@@ -2,33 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-
-export interface Restaurant {
-    id: string;
-    name: string;
-    description: string;
-    cuisine: string; // Add this to backend if missing or use description
-    imageUrl: string; // logoUrl
-    ratingAverage: number;
-    deliveryRadiusKm: number;
-    minOrderAmount: number;
-    status: string;
-}
-
-export interface MenuItem {
-    id: string;
-    name: string;
-    description: string;
-    basePrice: number;
-    foodType: 'VEG' | 'NON_VEG' | 'VEGAN';
-    imageUrl: string;
-    categoryId: string;
-}
-
-export interface Category {
-    id: string;
-    name: string;
-}
+import { Restaurant, MenuItem, Category, RestaurantRequest, DocumentUploadRequest } from '../restaurant/restaurant.types';
 
 interface ApiResponse<T> {
     success: boolean;
@@ -69,5 +43,32 @@ export class RestaurantService {
         return this.http.get<ApiResponse<MenuItem[]>>(`${this.apiUrl}/${restaurantId}/menu-items`).pipe(
             map(res => res.data)
         );
+    }
+
+    // Owner Methods
+    createRestaurant(data: RestaurantRequest): Observable<Restaurant> {
+        return this.http.post<ApiResponse<Restaurant>>(this.apiUrl, data).pipe(map(res => res.data));
+    }
+
+    getMyRestaurants(): Observable<Restaurant> {
+        return this.http.get<ApiResponse<Restaurant>>(`${this.apiUrl}/mine`).pipe(
+            map(response => response.data)
+        );
+    }
+
+    updateRestaurant(id: string, data: any): Observable<Restaurant> {
+        return this.http.put<ApiResponse<Restaurant>>(`${this.apiUrl}/${id}`, data).pipe(map(res => res.data));
+    }
+
+    uploadDocuments(restaurantId: string, data: DocumentUploadRequest): Observable<any> {
+        return this.http.post<ApiResponse<any>>(`${this.apiUrl}/${restaurantId}/documents`, data).pipe(map(res => res.data));
+    }
+
+    submitForReview(restaurantId: string): Observable<Restaurant> {
+        return this.http.patch<ApiResponse<Restaurant>>(`${this.apiUrl}/${restaurantId}/submit-for-review`, {}).pipe(map(res => res.data));
+    }
+
+    updateStatus(id: string, data: any): Observable<Restaurant> {
+        return this.http.patch<ApiResponse<Restaurant>>(`${this.apiUrl}/${id}/status`, data).pipe(map(res => res.data));
     }
 }

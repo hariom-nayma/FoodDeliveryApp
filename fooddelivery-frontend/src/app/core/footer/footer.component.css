@@ -1,8 +1,10 @@
 footer {
-    background-color: #f8f8f8;
-    padding: 3rem 0;
+    background-color: #111827;
+    color: #f3f4f6;
+    padding: 4rem 0 2rem;
     margin-top: auto;
-    border-top: 1px solid #eee;
+    border-top-left-radius: 40px;
+    border-top-right-radius: 40px;
 }
 
 .footer-content {
@@ -17,30 +19,22 @@ footer {
 }
 
 .footer-section h4 {
-    margin-bottom: 1rem;
-    font-size: 1rem;
-    letter-spacing: 1px;
+    margin-bottom: 1.25rem;
+    font-size: 0.875rem;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: #333;
-}
-
-ul {
-    list-style: none;
-    padding: 0;
-}
-
-li {
-    margin-bottom: 0.5rem;
+    color: #9ca3af;
+    font-weight: 600;
 }
 
 a {
     text-decoration: none;
-    color: #666;
+    color: #d1d5db;
     transition: color 0.2s;
 }
 
 a:hover {
-    color: #000;
+    color: #fff;
 }
 
 .social-links {

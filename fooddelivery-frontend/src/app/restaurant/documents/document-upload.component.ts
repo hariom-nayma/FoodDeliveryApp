@@ -1,7 +1,7 @@
 import { Component, inject, signal, Input, OnInit } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
-import { RestaurantService } from '../../core/restaurant/restaurant.service';
+import { RestaurantService } from '../../core/services/restaurant.service';
 import { DocumentUploadRequest } from '../../core/restaurant/restaurant.types';
 
 @Component({

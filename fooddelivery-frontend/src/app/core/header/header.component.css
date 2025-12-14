@@ -1,28 +1,150 @@
+/* Existing header styles... */
 header {
-    background: white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    padding: 1rem 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    padding: 0.75rem 0;
     position: sticky;
-    top: 0;
+    top: 1rem;
     z-index: 1000;
+    margin: 0 1rem;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.2);
 }
 
 .header-content {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 0 1.5rem;
 }
 
 .logo {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
     font-weight: 800;
     color: var(--text-color);
     text-decoration: none;
-    font-style: italic;
+    display: flex;
+    align-items: center;
+    gap: 2px;
 }
 
 nav {
     display: flex;
-    gap: 1rem;
+    gap: 2rem;
     align-items: center;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: #e23744;
+    color: white;
+}
+
+.btn-outline {
+    border: 1px solid #ddd;
+    background: white;
+    color: #333;
+}
+
+/* Dropdown Styles */
+.user-menu {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+    transition: background 0.2s;
+    user-select: none;
+}
+
+.user-menu:hover {
+    background: rgba(0,0,0,0.05);
+}
+
+.avatar {
+    width: 36px;
+    height: 36px;
+    background: #e23744;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+.arrow-down {
+    font-size: 0.7rem;
+    color: #666;
+    font-style: normal;
+}
+
+.dropdown {
+    position: absolute;
+    top: 120%;
+    right: 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    min-width: 200px;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(0,0,0,0.05);
+    animation: fadeIn 0.1s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown a {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    color: #374151;
+    text-decoration: none;
+    cursor: pointer;
+    display: block;
+    font-size: 0.95rem;
+    transition: background 0.1s;
+}
+
+.dropdown a:hover {
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.divider {
+    height: 1px;
+    background: #eee;
+    margin: 0.5rem 0;
+}
+
+.text-red {
+    color: #dc2626 !important;
+}
+
+.text-red:hover {
+    background: #fee2e2 !important;
+}
+
+.badge {
+    background: #e23744;
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 99px;
 }

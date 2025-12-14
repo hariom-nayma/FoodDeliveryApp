@@ -1,7 +1,7 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common'; // For ngClass etc
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
-import { RestaurantService } from '../../core/restaurant/restaurant.service';
+import { RestaurantService } from '../../core/services/restaurant.service';
 import { Restaurant, RestaurantStatus } from '../../core/restaurant/restaurant.types';
 import { OrderService } from '../../core/services/order.service';
 

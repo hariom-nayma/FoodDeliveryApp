@@ -1,6 +1,7 @@
 import { Component, inject, signal, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Category, MenuItem, Restaurant, RestaurantService } from '../core/services/restaurant.service';
+import { RestaurantService } from '../core/services/restaurant.service';
+import { Category, MenuItem, Restaurant } from '../core/restaurant/restaurant.types';
 import { CartService } from '../core/services/cart.service';
 
 @Component({
