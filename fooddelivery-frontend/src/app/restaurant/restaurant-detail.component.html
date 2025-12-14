@@ -1,10 +1,17 @@
 @if (restaurant(); as r) {
 <div class="banner">
-    <div class="container">
+    <div class="container banner-inner">
+        <div class="banner-img-container">
+            @if(r.imageUrl) {
+                <img [src]="r.imageUrl" [alt]="r.name" class="banner-img" onerror="this.src='/assets/placeholder-food.jpg'">
+            } @else {
+                <div class="banner-placeholder"></div>
+            }
+        </div>
         <div class="banner-content">
             <h1>{{ r.name }}</h1>
             <p>{{ r.description }}</p>
-            <p>{{ r.ratingAverage }} ★ | {{ r.deliveryRadiusKm }} km | Min ₹{{ r.minOrderAmount }}</p>
+            <p>{{ r.ratingAverage || 'New' }} ★ | {{ r.deliveryRadiusKm || '5' }} km | Min ₹{{ r.minOrderAmount || 150 }}</p>
         </div>
     </div>
 </div>

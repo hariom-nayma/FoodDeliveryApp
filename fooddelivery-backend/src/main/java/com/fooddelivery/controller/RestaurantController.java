@@ -27,9 +27,11 @@ public class RestaurantController {
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<RestaurantResponse>> createRestaurant(@Valid @RequestBody RestaurantRequest request, Authentication authentication) {
+    public ResponseEntity<ApiResponse<RestaurantResponse>> createRestaurant(
+            @Valid @RequestBody RestaurantRequest request, Authentication authentication) {
         String email = ((UserDetails) authentication.getPrincipal()).getUsername();
-        return new ResponseEntity<>(ApiResponse.success("Restaurant created successfully", restaurantService.createRestaurant(request, email)), HttpStatus.CREATED);
+        return new ResponseEntity<>(ApiResponse.success("Restaurant created successfully",
+                restaurantService.createRestaurant(request, email)), HttpStatus.CREATED);
     }
 
     @PostMapping("/{id}/documents")
@@ -40,20 +42,24 @@ public class RestaurantController {
             Authentication authentication) {
         String email = ((UserDetails) authentication.getPrincipal()).getUsername();
         restaurantService.uploadDocuments(id, request, email);
-        return ResponseEntity.ok(ApiResponse.success("Documents submitted successfully", Map.of("message", "Documents submitted successfully", "verificationStatus", "UNDER_REVIEW")));
+        return ResponseEntity.ok(ApiResponse.success("Documents submitted successfully",
+                Map.of("message", "Documents submitted successfully", "verificationStatus", "UNDER_REVIEW")));
     }
 
     @PatchMapping("/{id}/submit-for-review")
     @PreAuthorize("hasRole('RESTAURANT_OWNER')")
-    public ResponseEntity<ApiResponse<RestaurantResponse>> submitForReview(@PathVariable String id, Authentication authentication) {
+    public ResponseEntity<ApiResponse<RestaurantResponse>> submitForReview(@PathVariable String id,
+            Authentication authentication) {
         String email = ((UserDetails) authentication.getPrincipal()).getUsername();
-        return ResponseEntity.ok(ApiResponse.success("Restaurant submitted for review", restaurantService.submitForReview(id, email)));
+        return ResponseEntity.ok(
+                ApiResponse.success("Restaurant submitted for review", restaurantService.submitForReview(id, email)));
     }
 
     @GetMapping("/pending")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<RestaurantResponse>>> getPendingRestaurants() {
-        return ResponseEntity.ok(ApiResponse.success("Pending restaurants found", restaurantService.getPendingRestaurants()));
+        return ResponseEntity
+                .ok(ApiResponse.success("Pending restaurants found", restaurantService.getPendingRestaurants()));
     }
 
     @PatchMapping("/{id}/approve")
@@ -64,8 +70,10 @@ public class RestaurantController {
 
     @PatchMapping("/{id}/reject")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<RestaurantResponse>> rejectRestaurant(@PathVariable String id, @RequestBody Map<String, String> body) {
-        return ResponseEntity.ok(ApiResponse.success("Restaurant rejected", restaurantService.rejectRestaurant(id, body.get("reason"))));
+    public ResponseEntity<ApiResponse<RestaurantResponse>> rejectRestaurant(@PathVariable String id,
+            @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(
+                ApiResponse.success("Restaurant rejected", restaurantService.rejectRestaurant(id, body.get("reason"))));
     }
 
     @PatchMapping("/{id}/status")
@@ -76,7 +84,8 @@ public class RestaurantController {
         String email = ((UserDetails) authentication.getPrincipal()).getUsername();
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        return ResponseEntity.ok(ApiResponse.success("Restaurant status updated", restaurantService.updateStatus(id, request.getStatus(), email, isAdmin)));
+        return ResponseEntity.ok(ApiResponse.success("Restaurant status updated",
+                restaurantService.updateStatus(id, request.getStatus(), email, isAdmin)));
     }
 
     @GetMapping("/mine")
@@ -84,7 +93,8 @@ public class RestaurantController {
     public ResponseEntity<ApiResponse<RestaurantResponse>> getMyRestaurant(Authentication authentication) {
         String email = ((UserDetails) authentication.getPrincipal()).getUsername();
         RestaurantResponse restaurant = restaurantService.getMyRestaurant(email);
-        return restaurant != null ? ResponseEntity.ok(ApiResponse.success("Restaurant found", restaurant)) : ResponseEntity.noContent().build();
+        return restaurant != null ? ResponseEntity.ok(ApiResponse.success("Restaurant found", restaurant))
+                : ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}")
@@ -93,17 +103,29 @@ public class RestaurantController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<ApiResponse<List<RestaurantResponse>>> searchRestaurants(@RequestParam(required = false) String city) {
+    public ResponseEntity<ApiResponse<List<RestaurantResponse>>> searchRestaurants(
+            @RequestParam(required = false) String city) {
         if (city == null || city.trim().isEmpty()) {
             return ResponseEntity.ok(ApiResponse.success("No restaurants found", List.of()));
         }
         return ResponseEntity.ok(ApiResponse.success("Restaurants found", restaurantService.searchRestaurants(city)));
     }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('RESTAURANT_OWNER')")
+    public ResponseEntity<ApiResponse<RestaurantResponse>> updateRestaurant(
+            @PathVariable String id,
+            @Valid @RequestBody com.fooddelivery.dto.request.RestaurantUpdateRequest request,
+            Authentication authentication) {
+        String email = ((UserDetails) authentication.getPrincipal()).getUsername();
+        return ResponseEntity.ok(ApiResponse.success("Restaurant updated successfully",
+                restaurantService.updateRestaurant(id, request, email)));
+    }
+
     @GetMapping("/{id}/orders")
     @PreAuthorize("hasRole('RESTAURANT_OWNER')")
-    public ResponseEntity<ApiResponse<List<com.fooddelivery.entity.Order>>> getRestaurantOrders(@PathVariable String id) {
-         // Assuming OrderRepository logic exists or Service logic.
-         // I'll call restaurantService.getOrders(id) -> which calls repo.findByRestaurantId(id)
-         return ResponseEntity.ok(ApiResponse.success("Orders fetched", restaurantService.getOrders(id)));
+    public ResponseEntity<ApiResponse<List<com.fooddelivery.entity.Order>>> getRestaurantOrders(
+            @PathVariable String id) {
+        return ResponseEntity.ok(ApiResponse.success("Orders fetched", restaurantService.getOrders(id)));
     }
 }

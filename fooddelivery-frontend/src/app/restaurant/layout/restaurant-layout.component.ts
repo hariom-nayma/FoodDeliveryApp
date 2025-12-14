@@ -3,10 +3,10 @@ import { RouterLink, RouterLinkActive, RouterOutlet, ActivatedRoute } from '@ang
 import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
-    selector: 'app-restaurant-layout',
-    standalone: true,
-    imports: [RouterOutlet, RouterLink, RouterLinkActive],
-    template: `
+  selector: 'app-restaurant-layout',
+  standalone: true,
+  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  template: `
     <div class="layout-container">
       <aside class="sidebar">
         <div class="logo">
@@ -22,6 +22,9 @@ import { AuthService } from '../../core/auth/auth.service';
           <a [routerLink]="['/restaurant/manage', restaurantId, 'orders']" routerLinkActive="active" class="nav-item">
              📦 Orders
           </a>
+          <a [routerLink]="['/restaurant/manage', restaurantId, 'settings']" routerLinkActive="active" class="nav-item">
+             ⚙️ Settings
+          </a>
         </nav>
         
         <div class="logout-section">
@@ -33,7 +36,7 @@ import { AuthService } from '../../core/auth/auth.service';
       </main>
     </div>
   `,
-    styles: [`
+  styles: [`
     .layout-container { display: flex; min-height: 100vh; }
     .sidebar { width: 250px; background: #fff; border-right: 1px solid #eee; display: flex; flex-direction: column; position: fixed; height: 100vh; }
     .logo { padding: 1.5rem; border-bottom: 1px solid #eee; }
@@ -49,22 +52,22 @@ import { AuthService } from '../../core/auth/auth.service';
   `]
 })
 export class RestaurantLayoutComponent {
-    private route = inject(ActivatedRoute);
-    private auth = inject(AuthService);
+  private route = inject(ActivatedRoute);
+  private auth = inject(AuthService);
 
-    restaurantId = '';
+  restaurantId = '';
 
-    constructor() {
-        // Updated for /restaurant/manage/:id
-        const parts = window.location.pathname.split('/');
-        // URL: /restaurant/manage/123/dashboard
-        const idx = parts.indexOf('manage');
-        if (idx !== -1 && parts[idx + 1]) {
-            this.restaurantId = parts[idx + 1];
-        }
+  constructor() {
+    // Updated for /restaurant/manage/:id
+    const parts = window.location.pathname.split('/');
+    // URL: /restaurant/manage/123/dashboard
+    const idx = parts.indexOf('manage');
+    if (idx !== -1 && parts[idx + 1]) {
+      this.restaurantId = parts[idx + 1];
     }
+  }
 
-    logout() {
-        this.auth.logout();
-    }
+  logout() {
+    this.auth.logout();
+  }
 }

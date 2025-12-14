@@ -90,22 +90,75 @@ public class MenuService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public MenuItemResponse updateMenuItem(String restaurantId, String itemId, MenuItemRequest request,
+            MultipartFile image) {
+        MenuItem menuItem = menuItemRepository.findById(itemId)
+                .orElseThrow(() -> new RuntimeException("Menu item not found"));
+
+        if (!menuItem.getRestaurant().getId().equals(restaurantId)) {
+            throw new RuntimeException("Menu item does not belong to this restaurant");
+        }
+
+        menuItem.setName(request.getName());
+        menuItem.setDescription(request.getDescription());
+        menuItem.setBasePrice(request.getBasePrice());
+        if (request.getFoodType() != null) {
+            menuItem.setFoodType(FoodType.valueOf(request.getFoodType()));
+        }
+        menuItem.setAvailable(request.isAvailable());
+        if (request.getCategoryId() != null && !request.getCategoryId().equals(menuItem.getCategory().getId())) {
+            Category category = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new RuntimeException("Category not found"));
+            menuItem.setCategory(category);
+        }
+
+        if (image != null && !image.isEmpty()) {
+            String imageUrl = cloudinaryService.uploadImage(image);
+            menuItem.setImageUrl(imageUrl);
+        }
+
+        // Simplistic approach: Clear and recreate option groups or careful merge?
+        // For now, simpler to clear and re-add if provided in request
+        if (request.getOptionGroups() != null) {
+            menuItem.getOptionGroups().clear();
+            for (OptionGroupRequest groupRequest : request.getOptionGroups()) {
+                MenuItemOptionGroup group = MenuItemOptionGroup.builder()
+                        .name(groupRequest.getName())
+                        .isMultiSelect("MULTI_SELECT".equalsIgnoreCase(groupRequest.getType()))
+                        .isRequired(groupRequest.isRequired())
+                        .menuItem(menuItem)
+                        .build();
+
+                if (groupRequest.getOptions() != null) {
+                    for (OptionRequest optReq : groupRequest.getOptions()) {
+                        MenuItemOption option = MenuItemOption.builder()
+                                .label(optReq.getLabel())
+                                .extraPrice(optReq.getExtraPrice())
+                                .optionGroup(group)
+                                .build();
+                        group.addOption(option);
+                    }
+                }
+                menuItem.addOptionGroup(group);
+            }
+        }
+
+        return mapToResponse(menuItemRepository.save(menuItem));
+    }
+
     private MenuItemResponse mapToResponse(MenuItem item) {
-        List<OptionGroupDto> groups = item.getOptionGroups().stream().map(g ->
-                OptionGroupDto.builder()
-                        .id(g.getId())
-                        .name(g.getName())
-                        .multiSelect(g.isMultiSelect())
-                        .required(g.isRequired())
-                        .options(g.getOptions().stream().map(o ->
-                                OptionDto.builder()
-                                        .id(o.getId())
-                                        .label(o.getLabel())
-                                        .extraPrice(o.getExtraPrice())
-                                        .build()
-                        ).collect(Collectors.toList()))
-                        .build()
-        ).collect(Collectors.toList());
+        List<OptionGroupDto> groups = item.getOptionGroups().stream().map(g -> OptionGroupDto.builder()
+                .id(g.getId())
+                .name(g.getName())
+                .multiSelect(g.isMultiSelect())
+                .required(g.isRequired())
+                .options(g.getOptions().stream().map(o -> OptionDto.builder()
+                        .id(o.getId())
+                        .label(o.getLabel())
+                        .extraPrice(o.getExtraPrice())
+                        .build()).collect(Collectors.toList()))
+                .build()).collect(Collectors.toList());
 
         return MenuItemResponse.builder()
                 .id(item.getId())

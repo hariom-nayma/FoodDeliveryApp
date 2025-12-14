@@ -71,10 +71,11 @@ public class RestaurantService {
         restaurant.setFssaiNumber(request.getFssaiNumber());
         restaurantRepository.save(restaurant);
 
-        // Clear existing docs if any or append? usually append or replace specific types.
+        // Clear existing docs if any or append? usually append or replace specific
+        // types.
         // For simplicity, let's just add new ones.
         java.util.Set<String> uploadedTypes = new java.util.HashSet<>();
-        
+
         for (DocumentUploadRequest.DocumentDto docDto : request.getDocuments()) {
             RestaurantDocument doc = RestaurantDocument.builder()
                     .restaurant(restaurant)
@@ -87,10 +88,10 @@ public class RestaurantService {
         }
 
         // Auto-submit if all mandatory docs are present
-        if (uploadedTypes.contains("GST_CERTIFICATE") && 
-            uploadedTypes.contains("FSSAI_LICENSE") && 
-            uploadedTypes.contains("PAN_CARD")) {
-            
+        if (uploadedTypes.contains("GST_CERTIFICATE") &&
+                uploadedTypes.contains("FSSAI_LICENSE") &&
+                uploadedTypes.contains("PAN_CARD")) {
+
             if (restaurant.getStatus() == RestaurantStatus.DRAFT) {
                 restaurant.setStatus(RestaurantStatus.PENDING_REVIEW);
                 restaurantRepository.save(restaurant);
@@ -101,7 +102,7 @@ public class RestaurantService {
     @Transactional
     public RestaurantResponse submitForReview(String restaurantId, String ownerEmail) {
         Restaurant restaurant = getRestaurantIfOwner(restaurantId, ownerEmail);
-        
+
         // Validation: Check if docs exist? (Optional for now)
 
         restaurant.setStatus(RestaurantStatus.PENDING_REVIEW);
@@ -112,16 +113,16 @@ public class RestaurantService {
     public RestaurantResponse approveRestaurant(String restaurantId) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
-        
+
         restaurant.setStatus(RestaurantStatus.APPROVED);
-        
+
         // Upgrade user role to OWNER
         User owner = restaurant.getOwner();
         if (owner.getRole() == Role.ROLE_CUSTOMER) {
-             owner.setRole(Role.ROLE_RESTAURANT_OWNER);
-             userRepository.save(owner);
+            owner.setRole(Role.ROLE_RESTAURANT_OWNER);
+            userRepository.save(owner);
         }
-        
+
         return mapToResponse(restaurantRepository.save(restaurant));
     }
 
@@ -129,10 +130,10 @@ public class RestaurantService {
     public RestaurantResponse rejectRestaurant(String restaurantId, String reason) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
-        
+
         restaurant.setStatus(RestaurantStatus.REJECTED);
         // Log reason if we had a history table
-        
+
         return mapToResponse(restaurantRepository.save(restaurant));
     }
 
@@ -159,7 +160,7 @@ public class RestaurantService {
     public RestaurantResponse updateStatus(String restaurantId, String statusStr, String ownerEmail, boolean isAdmin) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
-        
+
         if (!isAdmin && !restaurant.getOwner().getEmail().equals(ownerEmail)) {
             throw new RuntimeException("Access denied");
         }
@@ -168,11 +169,14 @@ public class RestaurantService {
         // Owner checks
         if (!isAdmin) {
             if (newStatus != RestaurantStatus.ACTIVE && newStatus != RestaurantStatus.CLOSED) {
-                 throw new RuntimeException("Owners can only set ACTIVE or CLOSED status");
+                throw new RuntimeException("Owners can only set ACTIVE or CLOSED status");
             }
             // Can only open if APPROVED or previously ACTIVE/CLOSED
-            if (restaurant.getStatus() == RestaurantStatus.DRAFT || restaurant.getStatus() == RestaurantStatus.PENDING_REVIEW || restaurant.getStatus() == RestaurantStatus.REJECTED || restaurant.getStatus() == RestaurantStatus.SUSPENDED) {
-                 throw new RuntimeException("Restaurant is not in a valid state to open");
+            if (restaurant.getStatus() == RestaurantStatus.DRAFT
+                    || restaurant.getStatus() == RestaurantStatus.PENDING_REVIEW
+                    || restaurant.getStatus() == RestaurantStatus.REJECTED
+                    || restaurant.getStatus() == RestaurantStatus.SUSPENDED) {
+                throw new RuntimeException("Restaurant is not in a valid state to open");
             }
         }
 
@@ -183,7 +187,7 @@ public class RestaurantService {
     public RestaurantResponse getMyRestaurant(String ownerEmail) {
         User owner = userRepository.findByEmail(ownerEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        
+
         List<Restaurant> restaurants = restaurantRepository.findByOwnerId(owner.getId());
         if (restaurants.isEmpty()) {
             return null; // Or throw custom exception
@@ -199,6 +203,28 @@ public class RestaurantService {
             throw new RuntimeException("Access denied");
         }
         return restaurant;
+    }
+
+    @Transactional
+    public RestaurantResponse updateRestaurant(String restaurantId,
+            com.fooddelivery.dto.request.RestaurantUpdateRequest request, String ownerEmail) {
+        Restaurant restaurant = getRestaurantIfOwner(restaurantId, ownerEmail);
+
+        restaurant.setName(request.getName());
+        restaurant.setDescription(request.getDescription());
+        if (!restaurant.getPhone().equals(request.getPhone())
+                && restaurantRepository.existsByPhone(request.getPhone())) {
+            throw new RuntimeException("Phone number already in use");
+        }
+        restaurant.setPhone(request.getPhone());
+        restaurant.setCuisineTypes(request.getCuisineTypes());
+        restaurant.setOpeningTime(request.getOpeningTime());
+        restaurant.setClosingTime(request.getClosingTime());
+        if (request.getImageUrl() != null) {
+            restaurant.setImageUrl(request.getImageUrl());
+        }
+
+        return mapToResponse(restaurantRepository.save(restaurant));
     }
 
     private RestaurantResponse mapToResponse(Restaurant restaurant) {
@@ -223,6 +249,7 @@ public class RestaurantService {
                 .ownerId(restaurant.getOwner().getId())
                 .ownerName(restaurant.getOwner().getName())
                 .gstNumber(restaurant.getGstNumber())
+                .imageUrl(restaurant.getImageUrl())
                 .createdAt(restaurant.getCreatedAt() != null ? restaurant.getCreatedAt().toString() : null)
                 .build();
     }

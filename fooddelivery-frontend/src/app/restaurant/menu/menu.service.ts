@@ -44,7 +44,6 @@ export class MenuService {
 
     createMenuItem(restaurantId: string, itemData: any, imageFile?: File): Observable<any> {
         const formData = new FormData();
-        // itemData should be JSON blob
         const blob = new Blob([JSON.stringify(itemData)], { type: 'application/json' });
         formData.append('item', blob);
 
@@ -53,5 +52,17 @@ export class MenuService {
         }
 
         return this.http.post(`${this.apiUrl}/${restaurantId}/menu-items`, formData);
+    }
+
+    updateMenuItem(restaurantId: string, itemId: string, itemData: any, imageFile?: File): Observable<any> {
+        const formData = new FormData();
+        const blob = new Blob([JSON.stringify(itemData)], { type: 'application/json' });
+        formData.append('item', blob);
+
+        if (imageFile) {
+            formData.append('image', imageFile);
+        }
+
+        return this.http.put(`${this.apiUrl}/${restaurantId}/menu-items/${itemId}`, formData);
     }
 }

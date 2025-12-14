@@ -49,4 +49,5 @@ public class Restaurant extends BaseEntity {
 
     private String gstNumber;
     private String fssaiNumber;
+    private String imageUrl;
 }

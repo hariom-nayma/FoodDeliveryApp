@@ -13,27 +13,27 @@ export const routes: Routes = [
     { path: 'verify-otp', loadComponent: () => import('./auth/verify-otp.component').then(m => m.VerifyOtpComponent) },
     { path: 'my-orders', loadComponent: () => import('./customer/orders/my-orders.component').then(m => m.MyOrdersComponent), canActivate: [authGuard] }, // Optional: Add roleGuard for 'ROLE_CUSTOMER' if strictest needed
 
-    { 
-        path: 'restaurant/register', 
-        loadComponent: () => import('./restaurant/register/restaurant-register.component').then(m => m.RestaurantRegisterComponent), 
+    {
+        path: 'restaurant/register',
+        loadComponent: () => import('./restaurant/register/restaurant-register.component').then(m => m.RestaurantRegisterComponent),
         canActivate: [authGuard, roleGuard],
         data: { expectedRole: 'ROLE_RESTAURANT_OWNER' }
     },
-    { 
-        path: 'restaurant/pending', 
-        loadComponent: () => import('./restaurant/pending/pending-verification.component').then(m => m.PendingVerificationComponent), 
+    {
+        path: 'restaurant/pending',
+        loadComponent: () => import('./restaurant/pending/pending-verification.component').then(m => m.PendingVerificationComponent),
         canActivate: [authGuard, roleGuard],
         data: { expectedRole: 'ROLE_RESTAURANT_OWNER' }
     },
-    { 
-        path: 'restaurant/:id/documents', 
-        loadComponent: () => import('./restaurant/documents/document-upload.component').then(m => m.DocumentUploadComponent), 
+    {
+        path: 'restaurant/:id/documents',
+        loadComponent: () => import('./restaurant/documents/document-upload.component').then(m => m.DocumentUploadComponent),
         canActivate: [authGuard, roleGuard],
         data: { expectedRole: 'ROLE_RESTAURANT_OWNER' }
     },
-    { 
-        path: 'partner/home', 
-        loadComponent: () => import('./components/delivery-partner-home/delivery-partner-home').then(m => m.DeliveryPartnerHome), 
+    {
+        path: 'partner/home',
+        loadComponent: () => import('./components/delivery-partner-home/delivery-partner-home').then(m => m.DeliveryPartnerHome),
         canActivate: [authGuard, roleGuard],
         data: { expectedRole: 'ROLE_DELIVERY_PARTNER' }
     },
@@ -50,6 +50,7 @@ export const routes: Routes = [
             { path: 'dashboard', loadComponent: () => import('./restaurant/dashboard/owner-dashboard.component').then(m => m.OwnerDashboardComponent) },
             { path: 'menu', loadComponent: () => import('./restaurant/menu/menu-management.component').then(m => m.MenuManagementComponent) },
             { path: 'orders', loadComponent: () => import('./restaurant/orders/restaurant-orders.component').then(m => m.RestaurantOrdersComponent) },
+            { path: 'settings', loadComponent: () => import('./restaurant/settings/restaurant-settings.component').then(m => m.RestaurantSettingsComponent) },
             { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
         ]
     },

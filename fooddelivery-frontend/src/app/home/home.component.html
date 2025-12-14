@@ -21,7 +21,11 @@
     <div class="restaurant-grid">
         @for (restaurant of restaurants(); track restaurant.id) {
         <a [routerLink]="['/restaurant', restaurant.id]" class="card restaurant-card">
-            <div class="img-placeholder"></div>
+            @if(restaurant.imageUrl) {
+                <img [src]="restaurant.imageUrl" [alt]="restaurant.name" class="card-img" onerror="this.src='/assets/placeholder-food.jpg'">
+            } @else {
+                <div class="img-placeholder"></div>
+            }
             <h3>{{ restaurant.name }}</h3>
             <p class="restaurant-desc">{{ restaurant.description }}</p>
             <div class="card-footer">

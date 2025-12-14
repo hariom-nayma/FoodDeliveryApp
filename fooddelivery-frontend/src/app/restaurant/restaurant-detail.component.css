@@ -1,8 +1,47 @@
 .banner {
-    background-color: #1c1c1c;
+    background-color: #171a29;
     color: white;
     padding: 40px 0;
 }
+
+.banner-inner {
+    display: flex;
+    gap: 30px;
+    align-items: center;
+}
+
+.banner-img-container {
+    width: 250px;
+    height: 160px;
+    flex-shrink: 0;
+}
+
+.banner-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.banner-placeholder {
+    width: 100%;
+    height: 100%;
+    background-color: #333;
+    border-radius: 8px;
+}
+
+.banner-content h1 {
+    font-size: 2.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.banner-content p {
+    color: #cbd5e1;
+    margin-bottom: 0.5rem;
+}
+
+/* ... existing styles ... */
 
 .detail-container {
     margin-top: 2rem;
@@ -17,6 +56,8 @@
 .categories ul {
     list-style: none;
     padding: 0;
+    position: sticky;
+    top: 100px;
 }
 
 .categories li {
@@ -27,6 +68,11 @@
     text-decoration: none;
     color: var(--text-color);
     font-weight: 500;
+    transition: color 0.2s;
+}
+
+.categories a:hover {
+    color: #e23744;
 }
 
 .category-section {
@@ -37,7 +83,12 @@
     display: flex;
     justify-content: space-between;
     border-bottom: 1px solid #eee;
-    padding: 16px 0;
+    padding: 24px 0;
+}
+
+.item-info {
+    flex: 1;
+    padding-right: 20px;
 }
 
 .item-type {
@@ -47,15 +98,20 @@
 
 .price {
     font-weight: bold;
-    margin: 4px 0;
+    margin: 8px 0;
+    color: #333;
 }
 
 .desc {
-    color: #777;
+    color: #666;
     font-size: 0.9rem;
+    line-height: 1.4;
 }
 
 .item-action {
     display: flex;
     align-items: center;
+    position: relative;
 }
+
+/* Add Image to Menu items if desired in future, but for now just container */
