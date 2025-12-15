@@ -1,42 +1,85 @@
-<div class="container home-container">
-    <h1>Restaurants Nearby @if(detectedCity()) { in {{ detectedCity() }} }</h1>
+<div class="home-container">
 
-    <div class="mb-4 text-gray-600">
-        {{ locationStatus() }}
-        @if(locationStatus() === 'Location access denied') {
-        <button class="ml-2 text-blue-500 underline" (click)="detectLocation()">Retry</button>
-        }
-    </div>
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="hero-content">
+            <h1 class="hero-title">Hungry?</h1>
+            <p class="hero-subtitle">Order food from favourite restaurants near you.</p>
 
-    <div class="search-container">
-        <input type="text" class="search-input" placeholder="Enter city name (e.g. Bangalore, Mumbai)"
-            [ngModel]="searchCity()" (ngModelChange)="searchCity.set($event)" (keyup.enter)="onSearch()">
-        <button class="search-button" (click)="onSearch()">Search</button>
-    </div>
-
-    @if (loading()) {
-    <div>Loading restaurants...</div>
-    }
-
-    <div class="restaurant-grid">
-        @for (restaurant of restaurants(); track restaurant.id) {
-        <a [routerLink]="['/restaurant', restaurant.id]" class="card restaurant-card">
-            @if(restaurant.imageUrl) {
-                <img [src]="restaurant.imageUrl" [alt]="restaurant.name" class="card-img" onerror="this.src='/assets/placeholder-food.jpg'">
-            } @else {
-                <div class="img-placeholder"></div>
-            }
-            <h3>{{ restaurant.name }}</h3>
-            <p class="restaurant-desc">{{ restaurant.description }}</p>
-            <div class="card-footer">
-                <span class="rating">★ {{ restaurant.ratingAverage || 'New' }}</span>
-                <span class="min-order">Min ₹{{ restaurant.minOrderAmount }}</span>
+            <div class="search-wrapper">
+                <div style="padding:1rem; color:#aaa">📍</div>
+                <input type="text" class="search-input" placeholder="Enter your delivery location (e.g. Bangalore)"
+                    [ngModel]="searchCity()" (ngModelChange)="searchCity.set($event)" (keyup.enter)="onSearch()">
+                <button class="search-button" (click)="onSearch()">Find Food</button>
             </div>
-        </a>
-        } @empty {
-        @if (!loading()) {
-        <p>No restaurants found.</p>
-        }
+
+            <div class="mt-4 text-sm opacity-80">
+                <span *ngIf="locationStatus()">{{ locationStatus() }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters / Tabs -->
+    <div class="filters-bar">
+        <div class="filter-tab active">Delivery</div>
+        <div class="filter-tab">Dining Out</div>
+        <div class="filter-tab">Nightlife</div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content-wrapper">
+        <h2 class="section-heading">
+            @if(detectedCity()) {
+            Best Food in {{ detectedCity() }}
+            } @else {
+            Restaurants Nearby
+            }
+        </h2>
+
+        @if (loading()) {
+        <div class="loading-state">
+            <div style="font-size: 2rem; margin-bottom: 1rem;">🍔</div>
+            <p>Finding the best spots for you...</p>
+        </div>
+        } @else {
+        <div class="restaurant-grid">
+            @for (restaurant of restaurants(); track restaurant.id) {
+            <a [routerLink]="['/restaurant', restaurant.id]" class="restaurant-card">
+                <div class="card-img-container">
+                    <img [src]="restaurant.imageUrl || '/assets/placeholder-food.jpg'" [alt]="restaurant.name"
+                        class="card-img"
+                        onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80'">
+
+                    <div class="promoted-tag" *ngIf="false">Promoted</div>
+                    <div class="del-time">30-40 min</div>
+                </div>
+
+                <div class="card-info">
+                    <div class="info-header">
+                        <h3 class="res-name">{{ restaurant.name }}</h3>
+                        <div class="rating-badge"
+                            [style.background-color]="(restaurant.ratingAverage || 0) >= 4 ? 'var(--rating-green)' : '#db7c38'">
+                            {{ restaurant.ratingAverage || 'NEW' }} <span *ngIf="restaurant.ratingAverage">★</span>
+                        </div>
+                    </div>
+
+                    <p class="res-cuisine">{{ restaurant.cuisineTypes?.join(', ') || 'Multi Cuisine' }}</p>
+
+                    <div class="info-footer">
+                        <span class="cost-for-two">₹{{ restaurant.minOrderAmount ? (restaurant.minOrderAmount * 2) : 300
+                            }} for two</span>
+                        <span>Min Order ₹{{ restaurant.minOrderAmount }}</span>
+                    </div>
+                </div>
+            </a>
+            } @empty {
+            <div class="empty-state">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">😕</div>
+                <h3>No restaurants found in this area.</h3>
+                <p>Try searching for a different city or location.</p>
+            </div>
+            }
+        </div>
         }
     </div>
 </div>

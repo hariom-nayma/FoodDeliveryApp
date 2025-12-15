@@ -1,50 +1,97 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import 'leaflet/dist/leaflet.css';
-
-:root {
-  --primary-color: #000000;
-  --secondary-color: #f3f4f6;
-  --accent-blue: #3b82f6;
-  --accent-green: #10b981;
-  --accent-red: #ef4444;
-  --text-main: #111827;
-  --text-secondary: #6b7280;
-  --bg-color: #f9fafb;
-  --card-bg: #ffffff;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
-  --safe-area-pb: env(safe-area-inset-bottom, 20px);
-}
-
-body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: var(--bg-color);
-  color: var(--text-main);
-}
-
 @import '@angular/material/prebuilt-themes/indigo-pink.css';
 
-/* You can add global styles to this file, and also import other style files */
-html,
-body {
-  height: 100%;
+:root {
+  /* Brand Colors - Customer */
+  --brand-red: #e23744;
+  --brand-red-hover: #d32f2f;
+  --brand-black: #1c1c1c;
+  --brand-gray: #363636;
+
+  /* Brand Colors - Partner (Keep existing) */
+  --partner-primary: #4f46e5;
+  --partner-secondary: #ec4899;
+
+  /* Common UI Colors */
+  --bg-body: #ffffff;
+  --bg-gray: #f8f8f8;
+  --text-main: #1c1c1c;
+  --text-light: #696969;
+  --border-color: #e8e8e8;
+
+  --success-green: #24963f;
+  --rating-green: #24963f;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-hover: 0 8px 16px rgba(0, 0, 0, 0.12);
+
+  /* Spacing */
+  --radius-sm: 0.4rem;
+  --radius-md: 0.8rem;
+  --radius-lg: 1.2rem;
+
+  --nav-height: 72px;
 }
 
 body {
   margin: 0;
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-body);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  font-weight: 600;
+  color: var(--brand-black);
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* Utilities */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.btn-primary {
+  background: var(--brand-red);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  background: var(--brand-red-hover);
+  transform: translateY(-1px);
 }
 
 .badge {
-  background: #e23744;
+  background: var(--brand-red);
   color: white;
   padding: 2px 6px;
-  border-radius: 10px;
-  font-size: 0.8rem;
-  font-weight: bold;
-  margin-left: 4px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
 }

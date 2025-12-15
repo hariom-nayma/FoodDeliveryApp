@@ -4,10 +4,12 @@ import { RestaurantService } from '../core/services/restaurant.service';
 import { Category, MenuItem, Restaurant } from '../core/restaurant/restaurant.types';
 import { CartService } from '../core/services/cart.service';
 
+import { RouterLink } from '@angular/router';
+
 @Component({
   selector: 'app-restaurant-detail',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './restaurant-detail.component.html',
   styleUrl: './restaurant-detail.component.css'
 })

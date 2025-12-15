@@ -228,22 +228,25 @@ public class DispatchService {
 
                 // Check PENDING assignments
                 List<DeliveryAssignment> allAssignments = deliveryAssignmentRepository.findByOrder(currentOrder);
+                boolean timedOut = false;
+                
                 for (DeliveryAssignment pa : allAssignments) {
-                    // If we find the specific assignment we just made (or any pending), verify if
-                    // it timed out.
                     if ("PENDING".equalsIgnoreCase(pa.getStatus()) &&
                             pa.getDeliveryPartner().getId().equals(rider.getId())) {
 
                         pa.setStatus("TIMED_OUT");
                         pa.setRespondedAt(LocalDateTime.now());
                         deliveryAssignmentRepository.save(pa);
+                        timedOut = true;
+                        log.info("Assignment timed out for rider {}. Re-dispatching.", rider.getId());
                     }
                 }
 
-                // 4. Recurse to next candidate
-                // We are in a new thread, call attemptAssignment with the rest of the list
-                log.info("Timeout for rider {}. Trying next...", rider.getId());
-                attemptAssignment(candidates.subList(1, candidates.size()), orderId, radiusKm, surgeMultiplier);
+                // 4. Retry Dispatch (Fresh Search) if we timed out
+                // We do NOT recurse with stale list. We start fresh to find best available NOW.
+                if (timedOut) {
+                    dispatchOrder(orderId);
+                }
                 return null;
             });
         }, 15, TimeUnit.SECONDS); // 15s Timeout

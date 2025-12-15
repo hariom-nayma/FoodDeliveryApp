@@ -1,30 +1,31 @@
 @if (restaurant(); as r) {
+<!-- Premium Banner -->
 <div class="banner">
-    <div class="container banner-inner">
+    <div class="banner-inner">
         <div class="banner-img-container">
-            @if(r.imageUrl) {
-                <img [src]="r.imageUrl" [alt]="r.name" class="banner-img" onerror="this.src='/assets/placeholder-food.jpg'">
-            } @else {
-                <div class="banner-placeholder"></div>
-            }
+            <img [src]="r.imageUrl || '/assets/placeholder-food.jpg'" [alt]="r.name" class="banner-img"
+                onerror="this.src='/assets/placeholder-food.jpg'">
         </div>
         <div class="banner-content">
             <h1>{{ r.name }}</h1>
             <p>{{ r.description }}</p>
-            <p>{{ r.ratingAverage || 'New' }} ★ | {{ r.deliveryRadiusKm || '5' }} km | Min ₹{{ r.minOrderAmount || 150 }}</p>
+            <div class="meta-info">
+                <span class="meta-item">★ {{ r.ratingAverage || 'New' }}</span>
+                <span class="meta-item">🚚 {{ r.deliveryRadiusKm || '5' }} km</span>
+                <span class="meta-item">💰 Min ₹{{ r.minOrderAmount || 150 }}</span>
+            </div>
         </div>
     </div>
 </div>
-}
 
-<div class="container detail-container">
+<div class="detail-container">
     <div class="menu-layout">
         <!-- Categories Sidebar -->
         <div class="categories">
             <h3>Menu</h3>
-            <ul>
+            <ul class="cat-list">
                 @for (cat of categories(); track cat.id) {
-                <li><a [href]="'#cat-' + cat.id">{{ cat.name }}</a></li>
+                <li><a [href]="'#cat-' + cat.id" class="cat-link">{{ cat.name }}</a></li>
                 }
             </ul>
         </div>
@@ -33,21 +34,21 @@
         <div class="items">
             @for (cat of categories(); track cat.id) {
             <div [id]="'cat-' + cat.id" class="category-section">
-                <h2>{{ cat.name }}</h2>
+                <h2 class="category-title">{{ cat.name }}</h2>
 
                 @for (item of getItemsByCategory(cat.id); track item.id) {
                 <div class="menu-item-card">
                     <div class="item-info">
-                        <div class="item-type" [class.veg]="item.foodType === 'VEG'"
-                            [class.non-veg]="item.foodType === 'NON_VEG'">
-                            {{ item.foodType === 'VEG' ? '🟢' : '🔴' }}
+                        <div [class]="item.foodType === 'VEG' ? 'veg-icon' : 'non-veg-icon'">
+                            {{ item.foodType === 'VEG' ? '🟢 VEG' : '🔴 NON-VEG' }}
                         </div>
-                        <h4>{{ item.name }}</h4>
-                        <p class="price">₹{{ item.basePrice }}</p>
-                        <p class="desc">{{ item.description }}</p>
+                        <h4 class="item-name">{{ item.name }}</h4>
+                        <p class="item-price">₹{{ item.basePrice }}</p>
+                        <p class="item-desc">{{ item.description }}</p>
                     </div>
-                    <div class="item-action">
-                        <button class="btn btn-outline" (click)="addToCart(item)">Add</button>
+                    <div class="item-action-container">
+                        <!-- TODO: Add image here if available -->
+                        <button class="add-btn" (click)="addToCart(item)">ADD</button>
                     </div>
                 </div>
                 }
@@ -55,4 +56,22 @@
             }
         </div>
     </div>
+
+    <!-- Sticky Cart Summary Footer -->
+    @if (cartService.cart(); as cart) {
+    @if (cart.items.length > 0) {
+    <a routerLink="/cart" class="sticky-cart-footer">
+        <div class="cart-info">
+            <span class="cart-count">{{ cart.items.length }} ITEM{{ cart.items.length > 1 ? 'S' : '' }}</span>
+            <span class="cart-total">₹{{ cart.total }} plus taxes</span>
+        </div>
+        <div class="view-cart-text">
+            View Cart ➜
+        </div>
+    </a>
+    }
+    }
 </div>
+} @else {
+<div style="padding: 4rem; text-align: center;">Loading...</div>
+}

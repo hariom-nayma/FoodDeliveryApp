@@ -1,119 +1,114 @@
-<div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-  <div class="max-w-3xl mx-auto">
+<div class="page-container">
+  <div class="signup-card">
     
     <!-- Header -->
-    <div class="text-center mb-10">
-      <h2 class="text-3xl font-extrabold text-gray-900">Join our Delivery Fleet</h2>
-      <p class="mt-2 text-sm text-gray-600">Start earning by delivering happiness to doorsteps.</p>
+    <div class="card-header">
+      <h2>Join the Fleet</h2>
+      <p>Deliver happiness and earn on your own schedule.</p>
     </div>
 
-    <!-- Main Card -->
-    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+    <!-- Form Body -->
+    <div class="form-content">
       
-      <!-- Progress Bar (Visual) -->
-      <div class="h-2 bg-gray-200">
-        <div class="h-full bg-blue-600" style="width: 50%"></div>
+      <!-- Status Messages -->
+      <div *ngIf="message()" class="status-message" 
+           [class.success]="isSuccess()" 
+           [class.error]="!isSuccess()">
+        <span>{{ isSuccess() ? '✅' : '⚠️' }}</span>
+        {{ message() }}
       </div>
 
-      <div class="p-8">
+      <form [formGroup]="signupForm" (ngSubmit)="onSubmit()">
         
-        <!-- Messages -->
-        <div *ngIf="message()" class="mb-6 p-4 rounded-lg flex items-center" 
-             [class.bg-green-50]="isSuccess()" 
-             [class.text-green-700]="isSuccess()" 
-             [class.bg-red-50]="!isSuccess()" 
-             [class.text-red-700]="!isSuccess()">
-          <span class="text-xl mr-3">{{ isSuccess() ? '✅' : '⚠️' }}</span>
-          {{ message() }}
+        <!-- Section: Vehicle Selection -->
+        <h3 class="section-title">Select Your Ride</h3>
+        <div class="vehicle-grid">
+          
+          <div class="vehicle-card" 
+               [class.selected]="signupForm.get('vehicleType')?.value === 'BICYCLE'"
+               (click)="selectVehicle('BICYCLE')">
+            <div class="vehicle-icon">🚲</div>
+            <div class="vehicle-name">Bicycle</div>
+            <div class="vehicle-desc">Eco-friendly. No license needed.</div>
+          </div>
+
+          <div class="vehicle-card" 
+               [class.selected]="signupForm.get('vehicleType')?.value === 'BIKE'"
+               (click)="selectVehicle('BIKE')">
+            <div class="vehicle-icon">🏍️</div>
+            <div class="vehicle-name">Motorbike</div>
+            <div class="vehicle-desc">Fast deliveries. License required.</div>
+          </div>
+
+          <div class="vehicle-card" 
+               [class.selected]="signupForm.get('vehicleType')?.value === 'SCOOTER'"
+               (click)="selectVehicle('SCOOTER')">
+            <div class="vehicle-icon">🛵</div>
+            <div class="vehicle-name">Scooter</div>
+            <div class="vehicle-desc">Convenient & agile.</div>
+          </div>
+
+        </div>
+        <!-- Hidden input to bind validator, though handled by click -->
+        <input type="hidden" formControlName="vehicleType">
+
+
+        <!-- Section: Documents -->
+        <h3 class="section-title">Upload Documents</h3>
+        <div class="documents-grid">
+          
+          <!-- License -->
+          <div class="upload-card" [class.has-file]="!!licenseFile">
+            <div class="icon-box">
+              <span *ngIf="!licenseFile">🆔</span>
+              <span *ngIf="licenseFile">✓</span>
+            </div>
+            <div class="upload-info">
+              <span class="upload-label">Driving License</span>
+              <span class="upload-helper">{{ licenseFile ? licenseFile.name : 'Click to browse' }}</span>
+            </div>
+            <input type="file" class="file-input" (change)="onFileChange($event, 'license')" accept="image/*">
+          </div>
+
+          <!-- Aadhar -->
+          <div class="upload-card" [class.has-file]="!!aadharFile">
+            <div class="icon-box">
+              <span *ngIf="!aadharFile">💳</span>
+              <span *ngIf="aadharFile">✓</span>
+            </div>
+            <div class="upload-info">
+              <span class="upload-label">Aadhar Card</span>
+              <span class="upload-helper">{{ aadharFile ? aadharFile.name : 'Identity Proof' }}</span>
+            </div>
+            <input type="file" class="file-input" (change)="onFileChange($event, 'aadhar')" accept="image/*">
+          </div>
+
+          <!-- RC -->
+          <div class="upload-card" [class.has-file]="!!rcFile">
+            <div class="icon-box">
+              <span *ngIf="!rcFile">📄</span>
+              <span *ngIf="rcFile">✓</span>
+            </div>
+            <div class="upload-info">
+              <span class="upload-label">Vehicle RC</span>
+              <span class="upload-helper">{{ rcFile ? rcFile.name : 'Registration Cert' }}</span>
+            </div>
+            <input type="file" class="file-input" (change)="onFileChange($event, 'rc')" accept="image/*">
+          </div>
+
         </div>
 
-        <form [formGroup]="signupForm" (ngSubmit)="onSubmit()" class="space-y-8">
-          
-          <!-- Section 1: Vehicle Details -->
-          <div class="space-y-4">
-            <h3 class="text-lg font-medium text-gray-900 border-b pb-2">Vehicle Details</h3>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Select Vehicle Type</label>
-              <select formControlName="vehicleType" 
-                      class="w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border">
-                <option value="" disabled>Choose your ride...</option>
-                <option value="BICYCLE">🚲 Bicycle (No license required)</option>
-                <option value="BIKE">🏍️ Motorbike</option>
-                <option value="SCOOTER">🛵 Scooter</option>
-              </select>
-              <p *ngIf="signupForm.get('vehicleType')?.touched && signupForm.get('vehicleType')?.invalid" 
-                 class="mt-1 text-sm text-red-600">Vehicle type is required.</p>
-            </div>
-          </div>
+        <!-- Submit -->
+        <div class="submit-section">
+          <button type="submit" class="btn-submit" [disabled]="isLoading()">
+            {{ isLoading() ? 'Processing...' : 'Submit Application' }}
+          </button>
+          <p style="margin-top: 1rem; color: var(--text-muted); font-size: 0.85rem;">
+            By joining, you agree to our Partner Terms & Conditions.
+          </p>
+        </div>
 
-          <!-- Section 2: Documents -->
-          <div class="space-y-6">
-            <h3 class="text-lg font-medium text-gray-900 border-b pb-2">Verification Documents</h3>
-            
-            <!-- License -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center border p-4 rounded-lg hover:border-blue-300 transition-colors">
-              <div>
-                <label class="block text-sm font-medium text-gray-900">Driving License</label>
-                <p class="text-xs text-gray-500">Front side photo</p>
-              </div>
-              <div>
-                <input type="file" (change)="onFileChange($event, 'license')" accept="image/*"
-                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                <p *ngIf="!licenseFile && signupForm.touched" class="mt-1 text-xs text-red-600">File required</p>
-                <p *ngIf="licenseFile" class="mt-1 text-xs text-green-600">Selected: {{ licenseFile?.name }}</p>
-              </div>
-            </div>
-
-            <!-- Aadhar -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center border p-4 rounded-lg hover:border-blue-300 transition-colors">
-              <div>
-                <label class="block text-sm font-medium text-gray-900">Aadhar Card</label>
-                <p class="text-xs text-gray-500">Identity proof</p>
-              </div>
-              <div>
-                <input type="file" (change)="onFileChange($event, 'aadhar')" accept="image/*"
-                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                <p *ngIf="!aadharFile && signupForm.touched" class="mt-1 text-xs text-red-600">File required</p>
-                <p *ngIf="aadharFile" class="mt-1 text-xs text-green-600">Selected: {{ aadharFile?.name }}</p>
-              </div>
-            </div>
-
-            <!-- RC -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center border p-4 rounded-lg hover:border-blue-300 transition-colors">
-              <div>
-                <label class="block text-sm font-medium text-gray-900">Vehicle RC</label>
-                <p class="text-xs text-gray-500">Registration Certificate</p>
-              </div>
-              <div>
-                <input type="file" (change)="onFileChange($event, 'rc')" accept="image/*"
-                       class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                <p *ngIf="!rcFile && signupForm.touched" class="mt-1 text-xs text-red-600">File required</p>
-                <p *ngIf="rcFile" class="mt-1 text-xs text-green-600">Selected: {{ rcFile?.name }}</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Submit Action -->
-          <div class="pt-4">
-            <button type="submit" [disabled]="isLoading()"
-                    class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-70 transition-all shadow-md">
-              <span class="absolute left-0 inset-y-0 flex items-center pl-3">
-                <svg *ngIf="!isLoading()" class="h-5 w-5 text-blue-500 group-hover:text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
-                </svg>
-                <svg *ngIf="isLoading()" class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              </span>
-              {{ isLoading() ? 'Submitting Application...' : 'Submit Implementation' }}
-            </button>
-            <p class="mt-2 text-center text-xs text-gray-500">By clicking submit, you agree to our Partner Terms & Conditions.</p>
-          </div>
-
-        </form>
-      </div>
+      </form>
     </div>
   </div>
 </div>

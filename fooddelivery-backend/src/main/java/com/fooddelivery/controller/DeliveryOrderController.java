@@ -135,6 +135,10 @@ public class DeliveryOrderController {
         } else {
             assignment.setStatus("REJECTED");
             deliveryAssignmentRepository.save(assignment);
+
+            // IMMEDIATE RETRY: Trigger next dispatch
+            dispatchService.dispatchOrder(assignment.getOrder().getId());
+
             return ResponseEntity.ok(ApiResponse.success("Order Rejected", Map.of("status", "REJECTED")));
         }
     }
@@ -151,16 +155,16 @@ public class DeliveryOrderController {
 
         // Debug: Print all orders for this partner
         List<Order> allPartnerOrders = orderRepository.findAll().stream()
-             .filter(o -> o.getDeliveryPartner() != null && o.getDeliveryPartner().getId().equals(partner.getId()))
-             .collect(Collectors.toList());
-        
+                .filter(o -> o.getDeliveryPartner() != null && o.getDeliveryPartner().getId().equals(partner.getId()))
+                .collect(Collectors.toList());
+
         System.out.println("DEBUG: Total orders for partner: " + allPartnerOrders.size());
         allPartnerOrders.forEach(o -> System.out.println("DEBUG: Order " + o.getId() + " Status: " + o.getStatus()));
 
         List<Order> orders = allPartnerOrders.stream()
                 .filter(o -> o.getStatus() == OrderStatus.ASSIGNED_TO_RIDER || o.getStatus() == OrderStatus.PICKED_UP)
                 .collect(Collectors.toList());
-        
+
         System.out.println("DEBUG: Filtered active orders: " + orders.size());
 
         List<Map<String, Object>> response = orders.stream()
@@ -187,7 +191,7 @@ public class DeliveryOrderController {
                         "address", order.getRestaurant().getAddress().getState() + ", "
                                 + order.getRestaurant().getAddress().getCity()));
             } else {
-                 System.out.println("DEBUG: Restaurant address is NULL for order " + order.getId());
+                System.out.println("DEBUG: Restaurant address is NULL for order " + order.getId());
             }
 
             // Delivery Location Parsing
@@ -224,12 +228,12 @@ public class DeliveryOrderController {
         Order order = orderRepository.findById(orderId).orElseThrow();
         order.setStatus(OrderStatus.PICKED_UP);
         orderRepository.save(order);
-        
+
         Map<String, Object> response = mapOrderToResponse(order);
         if (order.getDeliveryPartner() != null) {
             dispatchService.sendOrderUpdate(order.getDeliveryPartner().getUserId(), response);
         }
-        
+
         return ResponseEntity.ok(ApiResponse.success("Order picked up", response));
     }
 
@@ -240,14 +244,14 @@ public class DeliveryOrderController {
         order.setStatus(OrderStatus.DELIVERED);
         order.setDeliveredAt(LocalDateTime.now());
         orderRepository.save(order);
-        
+
         // Final update (or removal)
         // Ideally we might want to clear the active order on frontend
         Map<String, Object> response = mapOrderToResponse(order); // Status DELIVERED
         if (order.getDeliveryPartner() != null) {
             dispatchService.sendOrderUpdate(order.getDeliveryPartner().getUserId(), response);
         }
-        
+
         return ResponseEntity.ok(ApiResponse.success("Order delivered", response));
     }
 
@@ -276,4 +280,3 @@ public class DeliveryOrderController {
         return ResponseEntity.ok(ApiResponse.success("Order history fetched", res));
     }
 }
-    
