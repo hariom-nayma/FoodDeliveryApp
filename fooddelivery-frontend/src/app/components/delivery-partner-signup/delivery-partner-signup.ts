@@ -38,30 +38,35 @@ export class DeliveryPartnerSignup {
       if (field === 'license') this.licenseFile = file;
       if (field === 'aadhar') this.aadharFile = file;
       if (field === 'rc') this.rcFile = file;
-      
+
       // Update form control to satisfy Validators.required
       this.signupForm.patchValue({ [field]: file });
     }
+  }
+
+  selectVehicle(type: string) {
+    this.signupForm.patchValue({ vehicleType: type });
+    this.signupForm.get('vehicleType')?.markAsDirty();
   }
 
   onSubmit() {
     console.log('Submit clicked');
     // Check form validity AND manual file checks (redundant but safe)
     if (this.signupForm.invalid || !this.licenseFile || !this.aadharFile || !this.rcFile) {
-        console.log('Form invalid', { 
-            form: this.signupForm.value, 
-            valid: this.signupForm.valid,
-            errors: {
-                v: this.signupForm.get('vehicleType')?.errors,
-                l: this.signupForm.get('license')?.errors,
-                a: this.signupForm.get('aadhar')?.errors,
-                r: this.signupForm.get('rc')?.errors
-            }
-        });
-        this.signupForm.markAllAsTouched();
-        this.message.set('Please fill all fields and upload all documents.');
-        this.isSuccess.set(false);
-        return;
+      console.log('Form invalid', {
+        form: this.signupForm.value,
+        valid: this.signupForm.valid,
+        errors: {
+          v: this.signupForm.get('vehicleType')?.errors,
+          l: this.signupForm.get('license')?.errors,
+          a: this.signupForm.get('aadhar')?.errors,
+          r: this.signupForm.get('rc')?.errors
+        }
+      });
+      this.signupForm.markAllAsTouched();
+      this.message.set('Please fill all fields and upload all documents.');
+      this.isSuccess.set(false);
+      return;
     }
 
     this.isLoading.set(true);
@@ -69,7 +74,7 @@ export class DeliveryPartnerSignup {
 
     const formData = new FormData();
     const requestData = { vehicleType: this.signupForm.get('vehicleType')?.value };
-    
+
     formData.append('data', new Blob([JSON.stringify(requestData)], { type: 'application/json' }));
     formData.append('license', this.licenseFile);
     formData.append('aadhar', this.aadharFile);

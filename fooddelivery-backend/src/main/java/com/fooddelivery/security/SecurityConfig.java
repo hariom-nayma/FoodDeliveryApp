@@ -25,6 +25,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable()) // Disable CSRF for stateless REST API
+                .cors(cors -> cors.configure(http)) // Enable CORS
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
@@ -32,6 +33,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/location/**").permitAll()
                         .requestMatchers("/api/v1/restaurants/**").permitAll()
                         .requestMatchers("/api/v1/menu-items/**").permitAll()
+                        .requestMatchers("/api/v1/navigation/**").authenticated()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

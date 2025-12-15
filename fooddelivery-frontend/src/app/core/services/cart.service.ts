@@ -16,6 +16,7 @@ export interface CartItemResponse {
     basePrice: number;
     finalPrice: number;
     options: CartOptionResponse[];
+    imageUrl: string;
 }
 
 export interface CartResponse {

@@ -115,4 +115,21 @@ public class PricingService {
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
     }
+
+    // Rider Payout Logic
+    private final double BASE_PAY = 20.0;
+    private final double PER_KM = 6.0;
+    private final double PER_MIN = 0.5;
+
+    public double calculatePayout(double distanceKm, double durationMin, double surgeMultiplier) {
+        double payout = BASE_PAY
+                + (distanceKm * PER_KM)
+                + (durationMin * PER_MIN);
+
+        return payout * surgeMultiplier;
+    }
+
+    public double calculateCustomerFee(double distanceKm, double durationMin, double surgeMultiplier) {
+        return (distanceKm * 10 + durationMin * 1.5 + 20) * surgeMultiplier;
+    }
 }

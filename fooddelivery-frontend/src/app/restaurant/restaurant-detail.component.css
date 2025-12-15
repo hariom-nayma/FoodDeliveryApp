@@ -1,61 +1,314 @@
-.banner {
-    background-color: #1c1c1c;
-    color: white;
-    padding: 40px 0;
-}
-
+/* Premium Restaurant Detail CSS */
 .detail-container {
-    margin-top: 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding-bottom: 80px;
+    /* Space for sticky cart */
+    position: relative;
 }
 
-.menu-layout {
-    display: grid;
-    grid-template-columns: 250px 1fr;
-    gap: 32px;
+/* Banner Section */
+.banner {
+    background-color: #171a29;
+    color: white;
+    padding: 3rem 0;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
 }
 
-.categories ul {
-    list-style: none;
-    padding: 0;
+.banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to right, #000 0%, transparent 100%);
+    z-index: 1;
 }
 
-.categories li {
-    margin-bottom: 12px;
+.banner-inner {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 1rem;
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
 }
 
-.categories a {
-    text-decoration: none;
-    color: var(--text-color);
+.banner-img-container {
+    width: 260px;
+    height: 170px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    flex-shrink: 0;
+}
+
+.banner-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.banner-content h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    color: white;
+}
+
+.banner-content p {
+    color: #cbd5e1;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.9;
+}
+
+.meta-info {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    font-size: 0.95rem;
     font-weight: 500;
 }
 
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Menu Layout */
+.menu-layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 3rem;
+    padding: 0 1rem;
+}
+
+/* Categories Sidebar */
+.categories {
+    position: sticky;
+    top: 100px;
+    height: fit-content;
+}
+
+.categories h3 {
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 1rem;
+    padding-right: 1rem;
+    border-right: 3px solid var(--brand-red);
+    display: inline-block;
+}
+
+.cat-list {
+    list-style: none;
+    padding: 0;
+    border-left: 1px solid var(--border-color);
+}
+
+.cat-list li {
+    margin-bottom: 0;
+}
+
+.cat-link {
+    display: block;
+    padding: 10px 15px;
+    color: var(--text-main);
+    font-weight: 500;
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+    margin-left: -2px;
+    /* overlap border */
+}
+
+.cat-link:hover,
+.cat-link.active {
+    color: var(--brand-red);
+    border-left-color: var(--brand-red);
+    background: linear-gradient(to right, #fff0f0, transparent);
+}
+
+/* Menu Items */
 .category-section {
-    margin-bottom: 32px;
+    margin-bottom: 2.5rem;
+}
+
+.category-title {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .menu-item-card {
+    display: grid;
+    grid-template-columns: 1fr 140px;
+    gap: 1rem;
+    padding: 1.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+    position: relative;
+}
+
+.menu-item-card:last-child {
+    border-bottom: none;
+}
+
+.item-info {
+    padding-right: 1rem;
+}
+
+.veg-icon {
+    color: var(--success-green);
+    font-size: 0.8rem;
+}
+
+.non-veg-icon {
+    color: var(--brand-red);
+    font-size: 0.8rem;
+}
+
+.item-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 4px 0;
+    color: var(--brand-black);
+}
+
+.item-price {
+    font-weight: 500;
+    color: var(--text-main);
+    margin-bottom: 10px;
+}
+
+.item-desc {
+    color: var(--text-light);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.item-action-container {
+    position: relative;
+    width: 130px;
+    height: 100px;
+    /* fixed size for image container if added later */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.add-btn {
+    background: white;
+    color: var(--success-green);
+    border: 1px solid var(--border-color);
+    padding: 8px 24px;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+}
+
+.add-btn:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+}
+
+.add-btn:active {
+    transform: scale(0.95);
+}
+
+/* Floating Cart Footer */
+.sticky-cart-footer {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 800px;
+    background: var(--brand-red);
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: var(--radius-lg);
     display: flex;
     justify-content: space-between;
-    border-bottom: 1px solid #eee;
-    padding: 16px 0;
+    align-items: center;
+    box-shadow: 0 10px 25px rgba(226, 55, 68, 0.4);
+    z-index: 100;
+    cursor: pointer;
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    text-decoration: none;
 }
 
-.item-type {
-    font-size: 0.8rem;
-    margin-bottom: 4px;
+.cart-info {
+    display: flex;
+    flex-direction: column;
 }
 
-.price {
-    font-weight: bold;
-    margin: 4px 0;
+.cart-count {
+    font-weight: 700;
+    font-size: 1rem;
+    text-transform: uppercase;
 }
 
-.desc {
-    color: #777;
+.cart-total {
     font-size: 0.9rem;
+    opacity: 0.9;
 }
 
-.item-action {
+.view-cart-text {
+    font-weight: 600;
+    font-size: 1.1rem;
     display: flex;
     align-items: center;
+    gap: 0.5rem;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translate(-50%, 100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .banner-inner {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .banner-img-container {
+        width: 100%;
+        height: 200px;
+    }
+
+    .menu-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .categories {
+        display: none;
+        /* Hide sidebar on mobile, maybe add scrollable top bar later */
+    }
+
+    .detail-container {
+        padding-bottom: 100px;
+    }
 }

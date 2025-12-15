@@ -37,12 +37,8 @@ export class DeliveryPartnerService {
     return this.http.get(`${this.ordersUrl}/requests`);
   }
 
-  acceptOrder(assignmentId: string): Observable<any> {
-    return this.http.post(`${this.ordersUrl}/requests/${assignmentId}/accept`, {});
-  }
-
-  rejectOrder(assignmentId: string): Observable<any> {
-    return this.http.post(`${this.ordersUrl}/requests/${assignmentId}/reject`, {});
+  respondToAssignment(assignmentId: string, accepted: boolean): Observable<any> {
+    return this.http.post(`${this.ordersUrl}/requests/${assignmentId}/respond`, { accepted });
   }
 
   markPickedUp(orderId: string): Observable<any> {

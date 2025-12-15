@@ -3,12 +3,41 @@
         <a routerLink="/" class="logo">ZomatoClone</a>
         <nav>
             @if (authService.isAuthenticated()) {
-            <span>Welcome, {{ authService.currentUser()?.name }}</span>
-            <a routerLink="/cart" class="btn btn-outline" style="display: flex; align-items: center; gap: 5px;">
-                🛒 Cart @if (cartService.cartCount() > 0) { <span class="badge">{{ cartService.cartCount() }}</span> }
-            </a>
-            <button class="btn btn-outline" (click)="openAddAddress()">📍 Add Address</button>
-            <button class="btn btn-outline" (click)="authService.logout()">Logout</button>
+                
+                @if (isCustomer()) {
+                    <a routerLink="/cart" class="btn btn-outline" style="display: flex; align-items: center; gap: 5px;">
+                        🛒 Cart @if (cartService.cartCount() > 0) { <span class="badge">{{ cartService.cartCount() }}</span> }
+                    </a>
+                }
+
+                <div class="user-menu" (click)="toggleMenu()">
+                    <div class="avatar">
+                        {{ authService.currentUser()?.name?.charAt(0)?.toUpperCase() }}
+                    </div>
+                    <span>{{ authService.currentUser()?.name }}</span>
+                    <i class="arrow-down">▼</i>
+
+                    @if (showMenu) {
+                        <div class="dropdown">
+                            <a (click)="openAddAddress()">📍 Add Address</a>
+                            
+                            @if (isCustomer()) {
+                                <a routerLink="/my-orders">📜 My Orders</a>
+                            }
+
+                            @if (isOwner()) {
+                                <a [routerLink]="['/restaurant/manage', authService.currentUser()?.id, 'dashboard']">📊 Dashboard</a>
+                            }
+
+                            @if (isDeliveryPartner()) {
+                                <a routerLink="/partner/home">🛵 Partner Home</a>
+                            }
+
+                            <div class="divider"></div>
+                            <a (click)="authService.logout()" class="text-red">Logout</a>
+                        </div>
+                    }
+                </div>
             } @else {
             <a routerLink="/login" class="btn btn-primary">Login</a>
             <a routerLink="/register" class="btn btn-outline">Signup</a>

@@ -28,14 +28,27 @@ public class MenuController {
             @PathVariable String restaurantId,
             @RequestPart("item") @Valid MenuItemRequest item,
             @RequestPart(value = "image", required = false) MultipartFile image) {
-        
+
         MenuItemResponse response = menuService.createMenuItem(restaurantId, item, image);
-        return new ResponseEntity<>(ApiResponse.success("Menu Item created successfully", response), HttpStatus.CREATED);
+        return new ResponseEntity<>(ApiResponse.success("Menu Item created successfully", response),
+                HttpStatus.CREATED);
     }
 
     @GetMapping("/restaurants/{restaurantId}/menu-items")
     public ResponseEntity<ApiResponse<List<MenuItemResponse>>> getMenuItems(@PathVariable String restaurantId) {
         List<MenuItemResponse> response = menuService.getMenuItems(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Menu Items fetched", response));
+    }
+
+    @PutMapping(value = "/restaurants/{restaurantId}/menu-items/{itemId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('RESTAURANT_OWNER')")
+    public ResponseEntity<ApiResponse<MenuItemResponse>> updateMenuItem(
+            @PathVariable String restaurantId,
+            @PathVariable String itemId,
+            @RequestPart("item") @Valid MenuItemRequest item,
+            @RequestPart(value = "image", required = false) MultipartFile image) {
+
+        MenuItemResponse response = menuService.updateMenuItem(restaurantId, itemId, item, image);
+        return ResponseEntity.ok(ApiResponse.success("Menu Item updated successfully", response));
     }
 }

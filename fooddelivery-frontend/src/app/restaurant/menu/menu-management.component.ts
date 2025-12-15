@@ -74,7 +74,8 @@ import { AddMenuItemDialogComponent } from './add-menu-item-dialog.component';
         @if (showItemDialog()) {
             <app-add-menu-item-dialog 
                 [categories]="categories()"
-                (close)="showItemDialog.set(false)"
+                [item]="selectedItem()"
+                (close)="showItemDialog.set(false); selectedItem.set(null)"
                 (save)="saveItem($event)"
             ></app-add-menu-item-dialog>
         }
@@ -111,6 +112,7 @@ export class MenuManagementComponent implements OnInit {
 
     showCategoryDialog = signal(false);
     showItemDialog = signal(false);
+    selectedItem = signal<any>(null);
 
     ngOnInit() {
         const parts = window.location.pathname.split('/');
@@ -142,15 +144,25 @@ export class MenuManagementComponent implements OnInit {
         });
     }
 
+    editItem(item: any) {
+        this.selectedItem.set(item);
+        this.showItemDialog.set(true);
+    }
+
     saveItem(event: { itemData: any, imageFile?: File }) {
-        this.menuService.createMenuItem(this.restaurantId, event.itemData, event.imageFile).subscribe({
+        const obs = this.selectedItem() 
+            ? this.menuService.updateMenuItem(this.restaurantId, this.selectedItem().id, event.itemData, event.imageFile)
+            : this.menuService.createMenuItem(this.restaurantId, event.itemData, event.imageFile);
+
+        obs.subscribe({
             next: (res) => {
                 if (res.success) {
                     this.loadData();
                     this.showItemDialog.set(false);
+                    this.selectedItem.set(null);
                 }
             },
-            error: (err) => alert('Failed to create item: ' + (err.error?.message || err.message))
+            error: (err) => alert('Failed to save item: ' + (err.error?.message || err.message))
         });
     }
 }

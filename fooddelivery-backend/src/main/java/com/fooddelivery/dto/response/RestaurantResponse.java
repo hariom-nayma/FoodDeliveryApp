@@ -28,4 +28,5 @@ public class RestaurantResponse {
     private String ownerName;
     private String gstNumber;
     private String createdAt;
+    private String imageUrl;
 }

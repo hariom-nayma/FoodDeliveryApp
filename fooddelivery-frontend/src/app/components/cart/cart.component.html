@@ -1,0 +1,126 @@
+<div class="container cart-container">
+    <h1>Your Cart</h1>
+
+    @if (cartService.cart(); as cart) {
+    @if (cart.items.length > 0) {
+    <div class="cart-layout">
+
+        <!-- Left Column -->
+        <div class="left-section">
+
+            <!-- Items Card -->
+            <div class="section-card">
+                <h3 class="section-title">Order Summary</h3>
+                <div class="cart-list">
+                    @for (item of cart.items; track item.cartItemId) {
+                    <div class="cart-item">
+                        <img [src]="item.imageUrl || '/assets/placeholder-food.jpg'" class="item-thumb" alt="Food">
+
+                        <div class="item-details">
+                            <h4>{{ item.name }}</h4>
+                            <div class="item-options" *ngIf="item.options.length > 0">
+                                <span *ngFor="let opt of item.options">
+                                    {{ opt.groupName }}: {{ opt.optionSelected }} (+₹{{opt.extraPrice}}),
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="qty-control">
+                            <button class="qty-btn" (click)="updateQty(item.cartItemId, item.quantity - 1)">−</button>
+                            <div class="qty-val">{{ item.quantity }}</div>
+                            <button class="qty-btn" (click)="updateQty(item.cartItemId, item.quantity + 1)">+</button>
+                        </div>
+
+                        <div class="item-price">₹{{ item.finalPrice }}</div>
+                    </div>
+                    }
+                </div>
+
+                <div style="margin-top: 1.5rem; text-align: right;">
+                    <button (click)="clearCart()"
+                        style="color:red; background:none; border:none; cursor:pointer; font-size:0.9rem;">
+                        Clear Cart
+                    </button>
+                </div>
+            </div>
+
+            <!-- Address Selection -->
+            <div class="section-card">
+                <h3 class="section-title">📍 Delivery Address</h3>
+                @if (addresses().length > 0) {
+                <div class="address-grid">
+                    <div *ngFor="let addr of addresses()" class="address-option"
+                        [class.selected]="selectedAddressId() === addr.addressId"
+                        (click)="selectedAddressId.set(addr.addressId)">
+                        <div class="addr-icon"> {{ selectedAddressId() === addr.addressId ? '◉' : '○' }}
+                        </div>
+                        <div class="addr-content">
+                            <strong>{{ addr.label || addr.type || 'Home' }}</strong>
+                            <p>{{ addr.line1 }}, {{ addr.city }} - {{ addr.postalCode }}</p>
+                        </div>
+                    </div>
+                </div>
+                } @else {
+                <p>No saved addresses. <a routerLink="/profile/addresses"
+                        style="color:var(--brand-red); font-weight:600;">Add New Address</a></p>
+                }
+            </div>
+
+            <!-- Payment Method -->
+            <div class="section-card">
+                <h3 class="section-title">💳 Payment Method</h3>
+                <select [(ngModel)]="paymentMethod" class="payment-select">
+                    <option value="COD">Cash On Delivery (COD)</option>
+                    <option value="ONLINE">Online Payment (UPI/Card)</option>
+                </select>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Bill Details -->
+        <div class="right-section">
+            <div class="bill-card">
+                <h3 class="section-title">Bill Details</h3>
+
+                <div class="bill-row">
+                    <span>Item Total</span>
+                    <span>₹{{ cart.subtotal }}</span>
+                </div>
+                <div class="bill-row">
+                    <span>Delivery Fee</span>
+                    <span>₹{{ cart.deliveryFee }}</span>
+                </div>
+                <div class="bill-row">
+                    <span>Taxes & Charges</span>
+                    <span>₹{{ cart.tax }}</span>
+                </div>
+
+                <div class="bill-row total-row">
+                    <span>To Pay</span>
+                    <span>₹{{ cart.total }}</span>
+                </div>
+
+                <button class="checkout-btn" (click)="placeOrder()" [disabled]="!selectedAddressId() || placingOrder()">
+                    {{ placingOrder() ? 'Processing...' : 'Place Order' }}
+                </button>
+
+                <p *ngIf="!selectedAddressId()"
+                    style="color:red; font-size:0.85rem; text-align:center; margin-top:1rem;">
+                    Select an address to proceed
+                </p>
+            </div>
+        </div>
+
+    </div>
+    } @else {
+    <div class="empty-cart">
+        <span class="empty-icon">🍽️</span>
+        <h3>Your cart is empty</h3>
+        <p>Good food is always cooking! Go ahead, order some yummy items from the menu.</p>
+        <a routerLink="/" class="empty-btn">See Restaurants Near You</a>
+    </div>
+    }
+    } @else {
+    <div class="empty-cart">Loading cart details...</div>
+    }
+</div>

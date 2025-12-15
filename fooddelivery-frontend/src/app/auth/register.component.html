@@ -1,24 +1,35 @@
+<div class="video-bg">
+    <video autoplay muted loop playsinline>
+        <source src="/assets/background.mp4" type="video/mp4">
+    </video>
+    <div class="overlay"></div>
+</div>
+
 <div class="container register-container">
-    <div class="card">
-        <h2>Sign Up</h2>
+    <div class="glass-card">
+        <div class="header">
+            <h2>Join Us</h2>
+            <p>Create your account today</p>
+        </div>
+
         <form [formGroup]="form" (ngSubmit)="onSubmit()">
             <div class="input-group">
                 <label>Full Name</label>
-                <input type="text" formControlName="name">
+                <input type="text" formControlName="name" placeholder="John Doe">
             </div>
             <div class="input-group">
                 <label>Email</label>
-                <input type="email" formControlName="email">
+                <input type="email" formControlName="email" placeholder="name@example.com">
             </div>
             <div class="input-group">
                 <label>Phone</label>
-                <input type="text" formControlName="phone">
+                <input type="text" formControlName="phone" placeholder="9876543210">
             </div>
             <div class="input-group">
                 <label>Password</label>
-                <input type="password" formControlName="password">
+                <input type="password" formControlName="password" placeholder="••••••••">
                 @if (passwordError()) {
-                    <div style="color: red; font-size: 0.8rem; margin-top: 0.2rem;">{{ passwordError() }}</div>
+                <div class="password-error">{{ passwordError() }}</div>
                 }
             </div>
 
@@ -26,7 +37,7 @@
             <div class="error-message">{{ error() }}</div>
             }
 
-            <button type="submit" class="btn btn-primary btn-full-width" [disabled]="form.invalid || loading()">
+            <button type="submit" class="btn-primary" [disabled]="form.invalid || loading()">
                 {{ loading() ? 'Signing up...' : 'Sign Up' }}
             </button>
         </form>

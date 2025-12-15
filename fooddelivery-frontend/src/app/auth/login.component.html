@@ -1,22 +1,33 @@
+<div class="video-bg">
+    <video autoplay muted loop playsinline>
+        <source src="/assets/background.mp4" type="video/mp4">
+    </video>
+    <div class="overlay"></div>
+</div>
+
 <div class="container login-container">
-    <div class="card">
-        <h2>Login</h2>
+    <div class="glass-card">
+        <div class="header">
+            <h2>Welcome Back</h2>
+            <p>Login to your account</p>
+        </div>
+
         <form [formGroup]="form" (ngSubmit)="onSubmit()">
             <div class="input-group">
                 <label>Email</label>
-                <input type="email" formControlName="email">
+                <input type="email" formControlName="email" placeholder="name@example.com">
             </div>
             <div class="input-group">
                 <label>Password</label>
-                <input type="password" formControlName="password">
+                <input type="password" formControlName="password" placeholder="••••••••">
             </div>
 
             @if (error()) {
             <div class="error-message">{{ error() }}</div>
             }
 
-            <button type="submit" class="btn btn-primary btn-full-width" [disabled]="form.invalid || loading()">
-                {{ loading() ? 'Logging in...' : 'Login' }}
+            <button type="submit" class="btn-primary" [disabled]="form.invalid || loading()">
+                {{ loading() ? 'Logging in...' : 'Sign In' }}
             </button>
         </form>
         <p class="register-link">

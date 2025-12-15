@@ -1,0 +1,59 @@
+<div class="container">
+    <div class="header">
+        <h1>My Orders</h1>
+        <p>Track your past and current orders</p>
+    </div>
+
+    @if (loading()) {
+    <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading your delicious history...</p>
+    </div>
+    } @else if (orders().length === 0) {
+    <div class="empty-state">
+        <div class="empty-icon">🍽️</div>
+        <h3>No orders yet</h3>
+        <p>Looks like you haven't ordered anything yet.</p>
+        <a routerLink="/" class="btn-primary">Explore Restaurants</a>
+    </div>
+    } @else {
+    <div class="orders-list">
+        @for (order of orders(); track order.id) {
+        <div class="order-card">
+            <div class="order-header">
+                <div class="restaurant-info">
+                    <h3>{{ order.restaurantName || 'Restaurant' }}</h3>
+                    <span class="date">{{ order.createdAt | date:'medium' }}</span>
+                </div>
+                <div class="order-status" [ngClass]="'status-' + order.status">
+                    {{ order.status }}
+                </div>
+            </div>
+
+            <div class="order-items">
+                @for (item of order.items; track item.id) {
+                <div class="item">
+                    <span class="quantity">{{ item.quantity }}x</span>
+                    <span class="name">{{ item.name }}</span>
+                    <span class="price">₹{{ item.price }}</span>
+                </div>
+                }
+            </div>
+
+            <div class="order-footer">
+                <div class="total">
+                    <span>Total</span>
+                    <span class="amount">₹{{ order.totalAmount }}</span>
+                </div>
+                <div class="actions">
+                    <!-- Reorder button could go here -->
+                    @if (order.status === 'DELIVERED') {
+                    <button class="btn-text">Rate Order</button>
+                    }
+                </div>
+            </div>
+        </div>
+        }
+    </div>
+    }
+</div>

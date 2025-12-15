@@ -8,7 +8,9 @@ import java.util.List;
 
 @Repository
 public interface MenuItemRepository extends JpaRepository<MenuItem, String> {
-    List<MenuItem> findByRestaurantId(String restaurantId);
+    
+    @org.springframework.data.jpa.repository.Query("SELECT m FROM MenuItem m WHERE m.restaurant.id = :restaurantId")
+    List<MenuItem> findByRestaurantId(@org.springframework.data.repository.query.Param("restaurantId") String restaurantId);
 
     List<MenuItem> findByCategoryId(String categoryId);
 }

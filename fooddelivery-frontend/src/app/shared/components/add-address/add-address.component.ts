@@ -111,6 +111,11 @@ export class AddAddressComponent implements OnInit, AfterViewInit {
 
     onAddAddress() {
         if (this.addressForm.valid) {
+            if (this.data && this.data.returnOnly) {
+                this.dialogRef.close(this.addressForm.value);
+                return;
+            }
+
             if (this.isEditMode && this.addressId) {
                 this.userService.updateAddress(this.addressId, this.addressForm.value).subscribe({
                     next: () => {

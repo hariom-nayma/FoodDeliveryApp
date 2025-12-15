@@ -17,6 +17,24 @@ export class HeaderComponent {
   authService = inject(AuthService);
   dialog = inject(MatDialog);
   cartService = inject(CartService);
+  showMenu = false;
+
+  toggleMenu() {
+    this.showMenu = !this.showMenu;
+  }
+
+  isCustomer() {
+    const role = this.authService.currentUser()?.role;
+    return !role || role === 'ROLE_CUSTOMER';
+  }
+
+  isOwner() {
+    return this.authService.currentUser()?.role === 'ROLE_RESTAURANT_OWNER';
+  }
+
+  isDeliveryPartner() {
+    return this.authService.currentUser()?.role === 'ROLE_DELIVERY_PARTNER';
+  }
 
   openAddAddress() {
     this.dialog.open(AddAddressComponent, {

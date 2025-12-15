@@ -56,35 +56,25 @@
       <!-- Step 3: Address -->
       @if (currentStep() === 3) {
         <h3>Location Details</h3>
+        <p style="color:#666; margin-bottom:1rem;">Please select your restaurant's exact location on the map.</p>
+        
+        <button type="button" class="btn-secondary" (click)="openAddressDialog()" style="width:auto; margin-bottom:1.5rem;">
+            📍 Select Location on Map
+        </button>
+
         <div formGroupName="address">
-            <div class="input-group">
-            <label>Address Line 1</label>
-            <input type="text" formControlName="addressLine1">
-            </div>
-            <div class="grid">
-            <div class="input-group">
-                <label>City</label>
-                <input type="text" formControlName="city">
-            </div>
-            <div class="input-group">
-                <label>State</label>
-                <input type="text" formControlName="state">
-            </div>
-            </div>
-            <div class="grid">
-            <div class="input-group">
-                <label>Pincode</label>
-                <input type="text" formControlName="pincode">
-            </div>
-            <div class="input-group">
-                <label>Latitude (Mock)</label>
-                <input type="number" formControlName="latitude">
-            </div>
-            <div class="input-group">
-                <label>Longitude (Mock)</label>
-                <input type="number" formControlName="longitude">
-            </div>
-            </div>
+            @if (form.get('address.addressLine1')?.value) {
+                <div class="address-preview">
+                    <strong>Selected Address:</strong>
+                    <p>{{ form.get('address.addressLine1')?.value }}</p>
+                    <p>{{ form.get('address.city')?.value }}, {{ form.get('address.state')?.value }} - {{ form.get('address.pincode')?.value }}</p>
+                    <small style="color:#888">Lat: {{ form.get('address.latitude')?.value | number:'1.4-4' }}, Lng: {{ form.get('address.longitude')?.value | number:'1.4-4' }}</small>
+                </div>
+            } @else {
+                <div class="address-preview" style="color:#999; font-style:italic;">
+                    No location selected yet.
+                </div>
+            }
         </div>
       }
       

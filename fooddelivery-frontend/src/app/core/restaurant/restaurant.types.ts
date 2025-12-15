@@ -32,6 +32,11 @@ export interface Restaurant {
     ownerName: string;
     gstNumber?: string;
     createdAt: string;
+    imageUrl?: string;
+    ratingAverage?: number;
+    deliveryRadiusKm?: number;
+    minOrderAmount?: number;
+    cuisine?: string; // For backward compatibility or single string display
 }
 
 export interface RestaurantRequest {
@@ -54,4 +59,21 @@ export interface DocumentUploadRequest {
 export interface RestaurantStatusUpdateRequest {
     status: string;
     reason?: string;
+}
+
+export interface MenuItem {
+    id: string;
+    name: string;
+    description: string;
+    basePrice: number;
+    foodType: 'VEG' | 'NON_VEG' | 'VEGAN';
+    imageUrl: string;
+    categoryId: string;
+    available?: boolean;
+}
+
+   export interface Category {
+    id: string;
+    name: string;
+    restaurantId?: string;
 }

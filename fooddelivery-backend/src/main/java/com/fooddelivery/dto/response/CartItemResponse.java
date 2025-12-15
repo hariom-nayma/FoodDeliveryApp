@@ -13,5 +13,6 @@ public class CartItemResponse {
     private Integer quantity;
     private Double basePrice;
     private Double finalPrice; // Unit price with options? Or total line price? Spec says "finalPrice: 560" for qty 2 @ 280. So line total.
+    private String imageUrl;
     private List<CartOptionResponse> options;
 }

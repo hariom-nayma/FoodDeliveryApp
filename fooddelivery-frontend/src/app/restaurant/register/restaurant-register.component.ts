@@ -1,13 +1,17 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { RestaurantService } from '../../core/restaurant/restaurant.service';
+import { MatDialog } from '@angular/material/dialog';
+import { RestaurantService } from '../../core/services/restaurant.service';
 import { RestaurantRequest } from '../../core/restaurant/restaurant.types';
+import { AddAddressComponent } from '../../shared/components/add-address/add-address.component';
+
+import { CommonModule } from '@angular/common';
 
 @Component({
     selector: 'app-restaurant-register',
     standalone: true,
-    imports: [ReactiveFormsModule],
+    imports: [CommonModule, ReactiveFormsModule],
     templateUrl: './restaurant-register.component.html',
     styles: [`
     .container { max-width: 800px; margin: 2rem auto; padding: 1rem; }
@@ -20,116 +24,144 @@ import { RestaurantRequest } from '../../core/restaurant/restaurant.types';
     button { background: var(--primary-color); color: white; border: none; padding: 1rem; border-radius: 4px; width: 100%; font-size: 1rem; cursor: pointer; }
     button:disabled { background: #ccc; cursor: not-allowed; }
     .error { color: red; font-size: 0.875rem; margin-top: -0.5rem; margin-bottom: 1rem; }
+    .address-preview { background: #f9f9f9; padding: 1rem; border-radius: 4px; margin-bottom: 1rem; border: 1px solid #eee; }
+    .btn-secondary { background: #666; margin-bottom: 1rem; }
   `]
 })
 export class RestaurantRegisterComponent implements OnInit {
     private fb = inject(NonNullableFormBuilder);
     private restaurantService = inject(RestaurantService);
     private router = inject(Router);
+    private dialog = inject(MatDialog);
+    
+    openAddressDialog() {
+        const dialogRef = this.dialog.open(AddAddressComponent, {
+            width: '600px',
+            data: { returnOnly: true }
+        });
+
+        dialogRef.afterClosed().subscribe(result => {
+            if (result) {
+                // Map the result address fields to our form
+                // AddAddressComponent uses: line1, line2, city, state, postalCode, latitude, longitude
+                // Our form uses: addressLine1, city, state, pincode, latitude, longitude
+                this.form.patchValue({
+                   address: {
+                       addressLine1: result.line1 + (result.line2 ? ', ' + result.line2 : ''),
+                       city: result.city,
+                       state: result.state,
+                       pincode: result.postalCode,
+                       latitude: result.latitude,
+                       longitude: result.longitude
+                   } 
+                });
+            }
+        });
+    }
 
     form = this.fb.group({
-        name: ['', [Validators.required, Validators.minLength(3)]],
-        description: [''],
-        phone: ['', [Validators.required, Validators.pattern('^[0-9]{10}$')]],
-        email: ['', [Validators.required, Validators.email]],
-        cuisineTypes: ['', Validators.required], // Comma separated for simplicity in UI, converted to array
-        openingTime: ['10:00', Validators.required],
-        closingTime: ['23:00', Validators.required],
-        address: this.fb.group({
-            addressLine1: ['', Validators.required],
-            city: ['', Validators.required],
-            state: ['', Validators.required],
-            pincode: ['', Validators.required],
-            latitude: [0, Validators.required],
-            longitude: [0, Validators.required]
-        })
+    name: ['', [Validators.required, Validators.minLength(3)]],
+    description: [''],
+    phone: ['', [Validators.required, Validators.pattern('^[0-9]{10}$')]],
+    email: ['', [Validators.required, Validators.email]],
+    cuisineTypes: ['', Validators.required], // Comma separated for simplicity in UI, converted to array
+    openingTime: ['10:00', Validators.required],
+    closingTime: ['23:00', Validators.required],
+    address: this.fb.group({
+        addressLine1: ['', Validators.required],
+    city: ['', Validators.required],
+    state: ['', Validators.required],
+    pincode: ['', Validators.required],
+    latitude: [0, Validators.required],
+    longitude: [0, Validators.required]
+})
     });
 
-    loading = signal(false);
+loading = signal(false);
 
-    ngOnInit() {
-        this.restaurantService.getMyRestaurants().subscribe({
-            next: (res: any) => {
-                // res might be null/undefined if 204
-                if (!res) return;
+ngOnInit() {
+    this.restaurantService.getMyRestaurants().subscribe({
+        next: (res: any) => {
+            // res might be null/undefined if 204
+            if (!res) return;
 
-                if (res.status === 'PENDING_REVIEW') {
-                    this.router.navigate(['/restaurant', 'pending']);
-                } else if (res.status === 'DRAFT') {
-                    // Optional: User might want to continue draft.
-                    // For now, let's allow them to stay on register to create new? 
-                    // Or redirect to documents if they finished step 1?
-                    // User Requirement: "create an api to check it and use it before calling create Restaurant".
-                    // It implies preventing creating a NEW one if one exists.
-                    // I'll leave DRAFT handling generic or redirect to dashboard/docs to finish.
-                    // But definitely PENDING -> pending page.
-                    if (res.gstNumber) {
-                        // Likely has basic info
-                        // this.router.navigate(['/restaurant', res.id, 'documents']);
-                    }
-                } else if (res.status === 'APPROVED' || res.status === 'ACTIVE') {
-                    this.router.navigate(['/restaurant/manage', res.id, 'dashboard']);
+            if (res.status === 'PENDING_REVIEW') {
+                this.router.navigate(['/restaurant', 'pending']);
+            } else if (res.status === 'DRAFT') {
+                // Optional: User might want to continue draft.
+                // For now, let's allow them to stay on register to create new? 
+                // Or redirect to documents if they finished step 1?
+                // User Requirement: "create an api to check it and use it before calling create Restaurant".
+                // It implies preventing creating a NEW one if one exists.
+                // I'll leave DRAFT handling generic or redirect to dashboard/docs to finish.
+                // But definitely PENDING -> pending page.
+                if (res.gstNumber) {
+                    // Likely has basic info
+                    // this.router.navigate(['/restaurant', res.id, 'documents']);
                 }
-            },
-            error: () => { } // Ignore 404/No Content
-        });
-    }
-
-    error = signal('');
-    currentStep = signal(1);
-
-    nextStep() {
-        const step = this.currentStep();
-        if (step === 1) {
-            if (this.checkControls(['name', 'description', 'phone', 'email'])) this.currentStep.set(2);
-        } else if (step === 2) {
-            if (this.checkControls(['cuisineTypes', 'openingTime', 'closingTime'])) this.currentStep.set(3);
-        }
-    }
-
-    prevStep() {
-        this.currentStep.update(s => Math.max(1, s - 1));
-    }
-
-    checkControls(controls: string[]): boolean {
-        let valid = true;
-        for (const name of controls) {
-            const control = this.form.get(name);
-            if (control?.invalid) {
-                control.markAsTouched();
-                valid = false;
+            } else if (res.status === 'APPROVED' || res.status === 'ACTIVE') {
+                this.router.navigate(['/restaurant/manage', res.id, 'dashboard']);
             }
+        },
+        error: () => { } // Ignore 404/No Content
+    });
+}
+
+error = signal('');
+currentStep = signal(1);
+
+nextStep() {
+    const step = this.currentStep();
+    if (step === 1) {
+        if (this.checkControls(['name', 'description', 'phone', 'email'])) this.currentStep.set(2);
+    } else if (step === 2) {
+        if (this.checkControls(['cuisineTypes', 'openingTime', 'closingTime'])) this.currentStep.set(3);
+    }
+}
+
+prevStep() {
+    this.currentStep.update(s => Math.max(1, s - 1));
+}
+
+checkControls(controls: string[]): boolean {
+    let valid = true;
+    for (const name of controls) {
+        const control = this.form.get(name);
+        if (control?.invalid) {
+            control.markAsTouched();
+            valid = false;
         }
-        return valid;
+    }
+    return valid;
+}
+
+onSubmit() {
+    if (this.currentStep() !== 3) return;
+    if (this.form.invalid) {
+        this.form.markAllAsTouched();
+        return;
     }
 
-    onSubmit() {
-        if (this.currentStep() !== 3) return;
-        if (this.form.invalid) {
-            this.form.markAllAsTouched();
-            return;
+    this.loading.set(true);
+    this.error.set('');
+
+    const formValue = this.form.getRawValue();
+    const cuisines = formValue.cuisineTypes.split(',').map(c => c.trim()).filter(c => c);
+
+    const request: RestaurantRequest = {
+        ...formValue,
+        cuisineTypes: cuisines,
+        address: formValue.address
+    };
+
+    this.restaurantService.createRestaurant(request).subscribe({
+        next: (restaurant) => {
+            this.router.navigate(['/restaurant', restaurant.id, 'documents']);
+        },
+        error: (err) => {
+            this.error.set(err.error?.message || 'Failed to create restaurant');
+            this.loading.set(false);
         }
-
-        this.loading.set(true);
-        this.error.set('');
-
-        const formValue = this.form.getRawValue();
-        const cuisines = formValue.cuisineTypes.split(',').map(c => c.trim()).filter(c => c);
-
-        const request: RestaurantRequest = {
-            ...formValue,
-            cuisineTypes: cuisines,
-            address: formValue.address
-        };
-
-        this.restaurantService.createRestaurant(request).subscribe({
-            next: (restaurant) => {
-                this.router.navigate(['/restaurant', restaurant.id, 'documents']);
-            },
-            error: (err) => {
-                this.error.set(err.error?.message || 'Failed to create restaurant');
-                this.loading.set(false);
-            }
-        });
-    }
+    });
+}
 }

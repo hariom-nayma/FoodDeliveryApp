@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth/auth.service';
-import { RestaurantService } from '../core/restaurant/restaurant.service';
+import { RestaurantService } from '../core/services/restaurant.service';
 
 @Component({
     selector: 'app-login',
