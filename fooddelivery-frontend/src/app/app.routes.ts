@@ -21,14 +21,12 @@ export const routes: Routes = [
     {
         path: 'restaurant/pending',
         loadComponent: () => import('./restaurant/pending/pending-verification.component').then(m => m.PendingVerificationComponent),
-        canActivate: [authGuard, roleGuard],
-        data: { expectedRole: 'ROLE_RESTAURANT_OWNER' }
+        canActivate: [authGuard],
     },
     {
         path: 'restaurant/:id/documents',
         loadComponent: () => import('./restaurant/documents/document-upload.component').then(m => m.DocumentUploadComponent),
-        canActivate: [authGuard, roleGuard],
-        data: { expectedRole: 'ROLE_RESTAURANT_OWNER' }
+        canActivate: [authGuard]
     },
     {
         path: 'partner/home',
