@@ -16,4 +16,7 @@ public interface DeliveryAssignmentRepository extends JpaRepository<DeliveryAssi
     java.util.List<DeliveryAssignment> findByDeliveryPartner_IdAndStatus(String partnerId, String status);
 
     java.util.List<DeliveryAssignment> findByOrder(Order order);
+
+    java.util.List<DeliveryAssignment> findByOrderAndStatusIn(Order order, java.util.List<String> statuses);
+
 }
