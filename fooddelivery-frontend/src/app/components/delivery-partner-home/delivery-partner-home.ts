@@ -43,20 +43,20 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
   earnings = signal<any>(null);
   userId = signal<string>(''); // Store userId
   riderLocation = signal<{ lat: number, lng: number } | null>(null);
-  
+
   constructor() {
     effect(() => {
-        const order = this.currentOrder();
-        const loc = this.riderLocation();
-        console.log('Effect Triggered: Order=', !!order, 'Location=', loc);
-        
-        // Redraw route if map is ready and data changed
-        if (order && loc && this.mapComponent) {
-             console.log('Effect: Conditions met, drawing route in 100ms');
-             setTimeout(() => this.updateRoute(order, loc), 100);
-        } else {
-             console.log('Effect: Conditions NOT met. MapComponent=', !!this.mapComponent);
-        }
+      const order = this.currentOrder();
+      const loc = this.riderLocation();
+      console.log('Effect Triggered: Order=', !!order, 'Location=', loc);
+
+      // Redraw route if map is ready and data changed
+      if (order && loc && this.mapComponent) {
+        console.log('Effect: Conditions met, drawing route in 100ms');
+        setTimeout(() => this.updateRoute(order, loc), 100);
+      } else {
+        console.log('Effect: Conditions NOT met. MapComponent=', !!this.mapComponent);
+      }
     });
   }
 
@@ -77,7 +77,7 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
       this.playSound();
 
       this.incomingRequest.set(payload);
-      this.startCountdown(25); // 25 seconds to accept
+      this.startCountdown(15); // 15 seconds to accept (Synced with Backend)
     });
 
     this.socketService.onOrderUpdate().subscribe(payload => {
@@ -129,15 +129,15 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
     this.deliveryService.getProfile().subscribe(res => {
       console.log('Profile Refreshed:', res.data);
       this.isOnline.set(res.data.isOnline);
-      
+
       // CRITICAL FIX: Set userId signal
       if (res.data.userId) {
-          this.userId.set(res.data.userId); 
+        this.userId.set(res.data.userId);
       } else if (res.data.user && res.data.user.id) {
-          this.userId.set(res.data.user.id);
+        this.userId.set(res.data.user.id);
       } else {
-          // Fallback if DTO is different, or log error
-          console.error('Profile missing userId!', res.data);
+        // Fallback if DTO is different, or log error
+        console.error('Profile missing userId!', res.data);
       }
 
       if (this.isOnline()) {
@@ -146,7 +146,7 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
       this.checkForActiveOrders();
 
       // Join Room
-      if (this.userId()) { 
+      if (this.userId()) {
         this.socketService.joinRiderRoom(this.userId());
       }
     });
@@ -191,15 +191,15 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
 
     if (toLat && toLng) {
       console.log('DeliveryPartnerHome: calling getRoute', fromLat, fromLng, toLat, toLng);
-      
+
       const markers = [
-          { lat: fromLat, lng: fromLng, title: 'You', icon: 'assets/deliveryman-marker.png' }
+        { lat: fromLat, lng: fromLng, title: 'You', icon: 'assets/deliveryman-marker.png' }
       ];
 
       if (order.status === 'ASSIGNED_TO_RIDER') {
-          markers.push({ lat: toLat, lng: toLng, title: order.restaurantName, icon: 'assets/restaurant-marker.png' });
+        markers.push({ lat: toLat, lng: toLng, title: order.restaurantName, icon: 'assets/restaurant-marker.png' });
       } else {
-          markers.push({ lat: toLat, lng: toLng, title: 'Customer', icon: 'assets/deliverlocation-marker.png' });
+        markers.push({ lat: toLat, lng: toLng, title: 'Customer', icon: 'assets/deliverlocation-marker.png' });
       }
 
       this.mapComponent.updateMarkers(markers);
@@ -211,16 +211,16 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
             console.log('Drawing Route on Map...');
             this.mapComponent.drawRoute(res.data.polyline);
           } else {
-             console.warn('Route response missing polyline:', res);
+            console.warn('Route response missing polyline:', res);
           }
         },
         error: (err) => {
-            console.error('Route Error:', err);
-            this.message.set('Failed to load route: ' + (err.error?.message || err.message));
+          console.error('Route Error:', err);
+          this.message.set('Failed to load route: ' + (err.error?.message || err.message));
         }
       });
     } else {
-        console.warn('DeliveryPartnerHome: Missing coordinates', fromLat, fromLng, toLat, toLng);
+      console.warn('DeliveryPartnerHome: Missing coordinates', fromLat, fromLng, toLat, toLng);
     }
   }
 
@@ -253,8 +253,8 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
     // Poll Location every 15s via Socket, starting immediately (0)
     this.locationInterval = timer(0, 15000).subscribe(() => {
       if (!this.userId()) {
-          console.warn('Skipping location fetch: No userId');
-          return; 
+        console.warn('Skipping location fetch: No userId');
+        return;
       }
       console.log('Requesting Geolocation...');
       navigator.geolocation.getCurrentPosition(pos => {
@@ -266,12 +266,12 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
         // Socket Emission instead of API Call
         this.socketService.emitLocation(this.userId(), lat, lng);
       }, err => {
-          console.error('Geolocation Error:', err.message, err.code);
-          this.message.set('Location Error: ' + err.message);
+        console.error('Geolocation Error:', err.message, err.code);
+        this.message.set('Location Error: ' + err.message);
       }, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
       });
     });
 

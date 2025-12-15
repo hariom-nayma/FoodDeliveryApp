@@ -222,6 +222,7 @@ public class CartService {
                     .quantity(i.getQuantity())
                     .basePrice(i.getItemPrice())
                     .finalPrice(i.getTotalPrice())
+                    .imageUrl(i.getMenuItem().getImageUrl())
                     .options(i.getOptions().stream().map(o -> 
                         CartOptionResponse.builder()
                                 .groupName(o.getOptionGroupName())

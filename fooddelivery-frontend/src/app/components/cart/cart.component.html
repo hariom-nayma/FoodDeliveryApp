@@ -14,7 +14,7 @@
                 <div class="cart-list">
                     @for (item of cart.items; track item.cartItemId) {
                     <div class="cart-item">
-                        <img [src]="'/assets/placeholder-food.jpg'" class="item-thumb" alt="Food">
+                        <img [src]="item.imageUrl || '/assets/placeholder-food.jpg'" class="item-thumb" alt="Food">
 
                         <div class="item-details">
                             <h4>{{ item.name }}</h4>
@@ -52,7 +52,7 @@
                     <div *ngFor="let addr of addresses()" class="address-option"
                         [class.selected]="selectedAddressId() === addr.addressId"
                         (click)="selectedAddressId.set(addr.addressId)">
-                        <div class="addr-icon">Correction: {{ selectedAddressId() === addr.addressId ? '◉' : '○' }}
+                        <div class="addr-icon"> {{ selectedAddressId() === addr.addressId ? '◉' : '○' }}
                         </div>
                         <div class="addr-content">
                             <strong>{{ addr.label || addr.type || 'Home' }}</strong>

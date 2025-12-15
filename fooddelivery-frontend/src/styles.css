@@ -23,6 +23,9 @@
   --success-green: #24963f;
   --rating-green: #24963f;
 
+  /* Legacy Support */
+  --primary-color: var(--brand-red);
+
   /* Shadows */
   --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);

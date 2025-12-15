@@ -131,7 +131,7 @@
 
 /* Buttons */
 .btn-primary {
-  background: var(--primary-color);
+  background: var(--partner-primary);
   color: white;
   border: none;
   font-weight: 600;

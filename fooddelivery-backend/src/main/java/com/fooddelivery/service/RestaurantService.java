@@ -138,7 +138,7 @@ public class RestaurantService {
     }
 
     public List<RestaurantResponse> getPendingRestaurants() {
-        return restaurantRepository.findByStatus(RestaurantStatus.PENDING_REVIEW).stream()
+        return restaurantRepository.findByStatus(RestaurantStatus.DRAFT).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
