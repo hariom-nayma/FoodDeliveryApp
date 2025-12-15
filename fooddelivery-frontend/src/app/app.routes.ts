@@ -16,8 +16,7 @@ export const routes: Routes = [
     {
         path: 'restaurant/register',
         loadComponent: () => import('./restaurant/register/restaurant-register.component').then(m => m.RestaurantRegisterComponent),
-        canActivate: [authGuard, roleGuard],
-        data: { expectedRole: 'ROLE_RESTAURANT_OWNER' }
+        canActivate: [authGuard]
     },
     {
         path: 'restaurant/pending',
