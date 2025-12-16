@@ -51,7 +51,7 @@
                 <div class="address-grid">
                     <div *ngFor="let addr of addresses()" class="address-option"
                         [class.selected]="selectedAddressId() === addr.addressId"
-                        (click)="selectedAddressId.set(addr.addressId)">
+                        (click)="selectAddress(addr.addressId)">
                         <div class="addr-icon"> {{ selectedAddressId() === addr.addressId ? '◉' : '○' }}
                         </div>
                         <div class="addr-content">
@@ -84,20 +84,36 @@
 
                 <div class="bill-row">
                     <span>Item Total</span>
-                    <span>₹{{ cart.subtotal }}</span>
+                    <span>₹{{ pricing()?.subtotal || cart.subtotal }}</span>
                 </div>
+                
+                <!-- Delivery Fee Logic -->
                 <div class="bill-row">
                     <span>Delivery Fee</span>
-                    <span>₹{{ cart.deliveryFee }}</span>
+                    <span>
+                        @if (pricing()?.deliveryFee === 0) {
+                            <span style="text-decoration: line-through; color: #999; margin-right: 5px;">₹40</span>
+                            <span style="color: #27ae60; font-weight: bold;">FREE</span>
+                        } @else {
+                            ₹{{ pricing() ? pricing().deliveryFee : cart.deliveryFee }}
+                        }
+                    </span>
                 </div>
+
                 <div class="bill-row">
                     <span>Taxes & Charges</span>
-                    <span>₹{{ cart.tax }}</span>
+                    <span>₹{{ pricing()?.tax || cart.tax }}</span>
+                </div>
+
+                <!-- Discount if any -->
+                <div class="bill-row" *ngIf="pricing()?.discount > 0" style="color: #27ae60;">
+                    <span>Discount</span>
+                    <span>-₹{{ pricing()?.discount }}</span>
                 </div>
 
                 <div class="bill-row total-row">
                     <span>To Pay</span>
-                    <span>₹{{ cart.total }}</span>
+                    <span>₹{{ pricing()?.total || cart.total }}</span>
                 </div>
 
                 <button class="checkout-btn" (click)="placeOrder()" [disabled]="!selectedAddressId() || placingOrder()">

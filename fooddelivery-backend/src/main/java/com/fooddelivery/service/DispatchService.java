@@ -108,7 +108,7 @@ public class DispatchService {
         // 1. Fetch Rejected/TimedOut IDs only if NOT in Surge mode
         // If Surge is applied (> 1.0), we give them a second chance with higher pay.
         java.util.Set<String> ignoreRiderIds = new java.util.HashSet<>();
-            
+
         if (surge <= 1.001) {
             List<String> ignoreStatuses = List.of("REJECTED", "TIMED_OUT");
             List<DeliveryAssignment> failedAssignments = deliveryAssignmentRepository.findByOrderAndStatusIn(order,
@@ -121,7 +121,7 @@ public class DispatchService {
                 log.debug("Filtering out {} riders who rejected/timed out: {}", ignoreRiderIds.size(), ignoreRiderIds);
             }
         } else {
-             log.info("Surge applied ({}x). Including previously rejected/timed-out riders for retry.", surge);
+            log.info("Surge applied ({}x). Including previously rejected/timed-out riders for retry.", surge);
         }
 
         // Need final variable for lambda
@@ -229,7 +229,7 @@ public class DispatchService {
                 // Check PENDING assignments
                 List<DeliveryAssignment> allAssignments = deliveryAssignmentRepository.findByOrder(currentOrder);
                 boolean timedOut = false;
-                
+
                 for (DeliveryAssignment pa : allAssignments) {
                     if ("PENDING".equalsIgnoreCase(pa.getStatus()) &&
                             pa.getDeliveryPartner().getId().equals(rider.getId())) {
@@ -268,5 +268,9 @@ public class DispatchService {
             socketIOServer.getRoomOperations("rider_" + riderUserId).sendEvent("order_update", orderData);
             log.info("Sent order update to rider_{}", riderUserId);
         }
+    }
+
+    public void releaseRiderLock(String riderId) {
+        redisService.unlock("rider_busy_" + riderId);
     }
 }

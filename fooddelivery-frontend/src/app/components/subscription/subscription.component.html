@@ -1,0 +1,54 @@
+<div class="subscription-container">
+    <div class="plan-card">
+        <div class="header">
+            <span class="badge">Most Popular</span>
+            <h1>Premium Membership</h1>
+            <p class="price">₹1 <span class="period">/ 3 months</span></p>
+        </div>
+
+        <div class="benefits">
+            <div class="benefit-item">
+                <span class="icon">🚀</span>
+                <div class="text">
+                    <strong>Free Delivery</strong>
+                    <p>On all orders above ₹199 within 7km</p>
+                </div>
+            </div>
+            <div class="benefit-item">
+                <span class="icon">⭐</span>
+                <div class="text">
+                    <strong>Priority Support</strong>
+                    <p>Dedicated support line</p>
+                </div>
+            </div>
+            <div class="benefit-item">
+                <span class="icon">🎁</span>
+                <div class="text">
+                    <strong>Exclusive Offers</strong>
+                    <p>Access to member-only deals</p>
+                </div>
+            </div>
+        </div>
+
+        <div *ngIf="errorMsg" class="error-msg">
+            {{ errorMsg }}
+        </div>
+
+        <div *ngIf="isPremium(); else buyBtn">
+            <div class="active-plan-msg">
+                <h3>✅ Plan Active</h3>
+                <p>Valid till: <strong>{{ expiryDate() }}</strong></p>
+            </div>
+            <button class="btn-buy disabled-btn" disabled>
+                Already Active
+            </button>
+        </div>
+
+        <ng-template #buyBtn>
+            <button class="btn-buy" (click)="buyPremium()" [disabled]="isLoading">
+                {{ isLoading ? 'Processing...' : 'Buy Now for ₹1' }}
+            </button>
+            <p class="terms">By continuing, you agree to our Terms & Conditions.</p>
+        </ng-template>
+    </div>
+</div>

@@ -38,4 +38,11 @@ public class User extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     private UserStatus status;
+
+    @Column
+    private java.time.LocalDateTime premiumExpiry;
+
+    public boolean isPremium() {
+        return premiumExpiry != null && premiumExpiry.isAfter(java.time.LocalDateTime.now());
+    }
 }

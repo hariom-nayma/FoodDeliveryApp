@@ -9,4 +9,5 @@ public class CalculatePriceRequest {
     private List<AddToCartRequest> items; // Reusing AddToCart which has itemId, qty, options
     private String offerCode;
     private String deliveryAddressId;
+    private String userId;
 }

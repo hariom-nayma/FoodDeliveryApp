@@ -5,6 +5,7 @@ import { OrderService } from '../../core/services/order.service';
 import { AddressService, Address } from '../../core/services/address.service';
 import { Router, RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
     selector: 'app-cart',
@@ -17,18 +18,61 @@ export class CartComponent implements OnInit {
     cartService = inject(CartService);
     addressService = inject(AddressService);
     orderService = inject(OrderService);
+    authService = inject(AuthService);
     router = inject(Router);
 
     addresses = signal<any[]>([]);
     selectedAddressId = signal<string>('');
     paymentMethod = signal<string>('COD');
     placingOrder = signal(false);
+    pricing = signal<any>(null);
 
     ngOnInit() {
         this.addressService.getMyAddresses().subscribe((addrs: any[]) => {
             this.addresses.set(addrs);
-            if (addrs.length > 0) this.selectedAddressId.set(addrs[0].addressId);
+            if (addrs.length > 0) {
+                this.selectedAddressId.set(addrs[0].addressId);
+                // Initial fetch
+                this.fetchPrice(); 
+            }
         });
+    }
+
+    fetchPrice() {
+        const cart = this.cartService.cart();
+        const addressId = this.selectedAddressId();
+
+        if (!cart || cart.items.length === 0 || !addressId) {
+            this.pricing.set(null);
+            return;
+        }
+
+        const payload = {
+            restaurantId: cart.restaurantId,
+            items: cart.items.map(i => ({
+                itemId: i.itemId,
+                quantity: i.quantity,
+                options: i.options ? i.options.map((o: any) => ({ optionId: 'UNKNOWN' })) : [] 
+                // Note: CartItemResponse structure verification required for exact option mapping.
+                // If backend requires precise option IDs for price calc, they must be present in CartItemResponse.
+            })),
+            deliveryAddressId: addressId,
+            userId: this.authService.currentUser()?.id
+        };
+
+        this.cartService.calculatePrice(payload).subscribe({
+            next: (res) => {
+                if (res.success) {
+                    this.pricing.set(res.data);
+                }
+            },
+            error: (err) => console.error('Pricing Error', err)
+        });
+    }
+
+    selectAddress(id: string) {
+        this.selectedAddressId.set(id);
+        this.fetchPrice();
     }
 
     updateQty(cartItemId: string, newQty: number) {
@@ -36,18 +80,18 @@ export class CartComponent implements OnInit {
             this.removeItem(cartItemId);
             return;
         }
-        this.cartService.updateCartItem({ cartItemId, quantity: newQty }).subscribe();
+        this.cartService.updateCartItem({ cartItemId, quantity: newQty }).subscribe(() => this.fetchPrice());
     }
 
     removeItem(cartItemId: string) {
         if (confirm('Remove this item?')) {
-            this.cartService.removeCartItem(cartItemId).subscribe();
+            this.cartService.removeCartItem(cartItemId).subscribe(() => this.fetchPrice());
         }
     }
 
     clearCart() {
         if (confirm('Clear entire cart?')) {
-            this.cartService.clearCart().subscribe();
+            this.cartService.clearCart().subscribe(() => this.pricing.set(null));
         }
     }
 
@@ -79,6 +123,7 @@ export class CartComponent implements OnInit {
     finalizeOrder(orderId: string) {
         this.placingOrder.set(false);
         this.cartService.cart.set(null); // Clear local cart state
+        this.pricing.set(null);
         alert('Order Placed Successfully! 🎉');
         this.router.navigate(['/orders', orderId]);
     }
@@ -95,8 +140,8 @@ export class CartComponent implements OnInit {
                 this.verifyPayment(order.id, response);
             },
             prefill: {
-                name: 'Guest', // Could fetch from profile if available
-                contact: '9999999999' // Placeholder or fetch
+                name: 'Guest',
+                contact: '9999999999'
             },
             theme: {
                 color: '#e23744'

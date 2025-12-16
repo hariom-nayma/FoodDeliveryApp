@@ -9,7 +9,7 @@ header {
     z-index: 1000;
     margin: 0 1rem;
     border-radius: 16px;
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .header-content {
@@ -69,7 +69,7 @@ nav {
 }
 
 .user-menu:hover {
-    background: rgba(0,0,0,0.05);
+    background: rgba(0, 0, 0, 0.05);
 }
 
 .avatar {
@@ -102,13 +102,20 @@ nav {
     padding: 0.5rem;
     display: flex;
     flex-direction: column;
-    border: 1px solid rgba(0,0,0,0.05);
+    border: 1px solid rgba(0, 0, 0, 0.05);
     animation: fadeIn 0.1s ease-out;
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .dropdown a {
@@ -147,4 +154,14 @@ nav {
     font-size: 0.75rem;
     padding: 0.1rem 0.4rem;
     border-radius: 99px;
+}
+
+.text-gold {
+    color: #e67e22 !important;
+    font-weight: bold;
+    background: rgba(255, 234, 167, 0.2);
+}
+
+.text-gold:hover {
+    background: rgba(255, 234, 167, 0.4);
 }
