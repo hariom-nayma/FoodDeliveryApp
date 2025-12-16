@@ -120,13 +120,20 @@ public class DeliveryOrderController {
 
             Map<String, Object> response = mapOrderToResponse(order);
             dispatchService.sendOrderUpdate(assignment.getDeliveryPartner().getUserId(), response);
+            
+            // Release Dispatch Guard so future dispatches are clean (though order is taken now)
+            dispatchService.releaseDispatchGuard(order.getId());
+            
             return ResponseEntity.ok(ApiResponse.success("Order Accepted", response));
         } else {
             assignment.setStatus("REJECTED");
             deliveryAssignmentRepository.save(assignment);
             
-            // Unlock Rider immediately so they can be candidate for other orders (except this one if logic filters)
+            // Unlock Rider immediately
             dispatchService.releaseRiderLock(assignment.getDeliveryPartner().getUserId());
+            
+            // Unlock Dispatch Guard so new dispatch can start
+            dispatchService.releaseDispatchGuard(assignment.getOrder().getId());
             
             dispatchService.dispatchOrder(assignment.getOrder().getId());
             return ResponseEntity.ok(ApiResponse.success("Order Rejected", Map.of("status", "REJECTED")));
@@ -145,7 +152,7 @@ public class DeliveryOrderController {
                 .collect(Collectors.toList());
 
         List<Order> orders = allPartnerOrders.stream()
-                .filter(o -> o.getStatus() == OrderStatus.ASSIGNED_TO_RIDER || o.getStatus() == OrderStatus.PICKED_UP)
+                .filter(o -> o.getStatus() == OrderStatus.RIDER_ACCEPTED || o.getStatus() == OrderStatus.ASSIGNED_TO_RIDER || o.getStatus() == OrderStatus.PICKED_UP)
                 .collect(Collectors.toList());
 
         List<Map<String, Object>> response = orders.stream()
@@ -159,7 +166,12 @@ public class DeliveryOrderController {
         Map<String, Object> map = new HashMap<>();
         map.put("orderId", order.getId());
         map.put("restaurantName", order.getRestaurant().getName());
-        map.put("status", order.getStatus());
+        // Map RIDER_ACCEPTED to ASSIGNED_TO_RIDER for Frontend Compatibility
+        if (order.getStatus() == OrderStatus.RIDER_ACCEPTED) {
+            map.put("status", OrderStatus.ASSIGNED_TO_RIDER);
+        } else {
+            map.put("status", order.getStatus());
+        }
         map.put("customerName", order.getUser().getName());
         map.put("customerPhone", order.getUser().getPhone());
 

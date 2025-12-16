@@ -78,4 +78,17 @@ public class RedisService {
     public String getLockValue(String key) {
         return redisTemplate.opsForValue().get(key);
     }
+
+    public Long increment(String key) {
+        return redisTemplate.opsForValue().increment(key);
+    }
+
+    public int getInt(String key) {
+        String val = redisTemplate.opsForValue().get(key);
+        return val != null ? Integer.parseInt(val) : 0;
+    }
+
+    public boolean exists(String key) {
+        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+    }
 }
