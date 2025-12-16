@@ -29,6 +29,8 @@ public class DeliveryAssignment extends BaseEntity {
     @JoinColumn(name = "delivery_partner_id", nullable = false)
     private DeliveryPartner deliveryPartner;
 
+    private Double expectedEarning;
+
     private String status;
 
     private LocalDateTime assignedAt;

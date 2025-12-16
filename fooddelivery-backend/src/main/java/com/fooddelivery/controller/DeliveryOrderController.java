@@ -18,7 +18,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,14 +33,10 @@ public class DeliveryOrderController {
     private final DeliveryAssignmentRepository deliveryAssignmentRepository;
     private final UserRepository userRepository;
     private final com.fooddelivery.service.DispatchService dispatchService;
+    private final com.fooddelivery.service.OrderService orderService;
 
     private String getUserId(UserDetails userDetails) {
         return userRepository.findByEmail(userDetails.getUsername()).orElseThrow().getId();
-    }
-
-    private String getPartnerId(String userId) {
-        return deliveryPartnerRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Not a delivery partner")).getId();
     }
 
     @GetMapping("/requests")
@@ -62,16 +57,7 @@ public class DeliveryOrderController {
             map.put("assignmentId", a.getId());
             map.put("orderId", order.getId());
             map.put("restaurantName", order.getRestaurant().getName());
-
-            // Re-calculate/Fetch info (In real scenario, snapshot might be in Assignment or
-            // we re-calc)
-            // For now, simpler map
-            map.put("earnings", 35.0); // Or fetch from pricing service if stored?
-            // Note: DispatchService stored earnings in Payload but not in Assignment Entity
-            // (Wait, did it?).
-            // If we want exact earnings shown in Popup, we need to store it or
-            // re-calculate.
-            // Let's re-calculate or just use strict logic.
+            map.put("earnings", a.getExpectedEarning() != null ? a.getExpectedEarning() : 0.0);
 
             try {
                 if (order.getRestaurant().getAddress() != null) {
@@ -100,7 +86,6 @@ public class DeliveryOrderController {
         DeliveryAssignment assignment = deliveryAssignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new RuntimeException("Assignment not found"));
 
-        // Validate Rider
         if (!assignment.getDeliveryPartner().getUserId().equals(userId)) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Unauthorized", "UNAUTHORIZED"));
         }
@@ -113,10 +98,9 @@ public class DeliveryOrderController {
         assignment.setRespondedAt(LocalDateTime.now());
 
         if (request.isAccepted()) {
-            // Check if order is already assigned to someone else (Double check)
             Order order = assignment.getOrder();
             if (order.getDeliveryPartner() != null) {
-                assignment.setStatus("EXPIRED"); // Or REJECTED_AUTO
+                assignment.setStatus("EXPIRED");
                 deliveryAssignmentRepository.save(assignment);
                 return ResponseEntity.badRequest().body(ApiResponse.error("Order already taken", "ORDER_Taken"));
             }
@@ -126,24 +110,28 @@ public class DeliveryOrderController {
 
             order.setDeliveryPartner(assignment.getDeliveryPartner());
             order.setStatus(OrderStatus.ASSIGNED_TO_RIDER);
+
+            // Lock in the earning
+            if (assignment.getExpectedEarning() != null) {
+                order.setRiderEarning(assignment.getExpectedEarning());
+            }
+
             orderRepository.save(order);
 
-            // Return FULL order details for frontend
             Map<String, Object> response = mapOrderToResponse(order);
             dispatchService.sendOrderUpdate(assignment.getDeliveryPartner().getUserId(), response);
             return ResponseEntity.ok(ApiResponse.success("Order Accepted", response));
         } else {
             assignment.setStatus("REJECTED");
             deliveryAssignmentRepository.save(assignment);
-
-            // IMMEDIATE RETRY: Trigger next dispatch
+            
+            // Unlock Rider immediately so they can be candidate for other orders (except this one if logic filters)
+            dispatchService.releaseRiderLock(assignment.getDeliveryPartner().getUserId());
+            
             dispatchService.dispatchOrder(assignment.getOrder().getId());
-
             return ResponseEntity.ok(ApiResponse.success("Order Rejected", Map.of("status", "REJECTED")));
         }
     }
-
-    // ... (markPickedUp, markDelivered remain same)
 
     @GetMapping("/active")
     @PreAuthorize("hasRole('DELIVERY_PARTNER')")
@@ -151,21 +139,14 @@ public class DeliveryOrderController {
             @AuthenticationPrincipal UserDetails userDetails) {
         String userId = getUserId(userDetails);
         var partner = deliveryPartnerRepository.findByUserId(userId).orElseThrow();
-        System.out.println("DEBUG: Fetching active orders for partner: " + partner.getId());
 
-        // Debug: Print all orders for this partner
         List<Order> allPartnerOrders = orderRepository.findAll().stream()
                 .filter(o -> o.getDeliveryPartner() != null && o.getDeliveryPartner().getId().equals(partner.getId()))
                 .collect(Collectors.toList());
 
-        System.out.println("DEBUG: Total orders for partner: " + allPartnerOrders.size());
-        allPartnerOrders.forEach(o -> System.out.println("DEBUG: Order " + o.getId() + " Status: " + o.getStatus()));
-
         List<Order> orders = allPartnerOrders.stream()
                 .filter(o -> o.getStatus() == OrderStatus.ASSIGNED_TO_RIDER || o.getStatus() == OrderStatus.PICKED_UP)
                 .collect(Collectors.toList());
-
-        System.out.println("DEBUG: Filtered active orders: " + orders.size());
 
         List<Map<String, Object>> response = orders.stream()
                 .map(this::mapOrderToResponse)
@@ -182,7 +163,11 @@ public class DeliveryOrderController {
         map.put("customerName", order.getUser().getName());
         map.put("customerPhone", order.getUser().getPhone());
 
-        // Locations
+        // Add Payment Info for COD
+        map.put("totalAmount", order.getTotalAmount());
+        map.put("paymentMethod", order.getPaymentMethod());
+        map.put("paymentStatus", order.getPaymentStatus());
+
         try {
             if (order.getRestaurant().getAddress() != null) {
                 map.put("pickupLocation", Map.of(
@@ -190,11 +175,8 @@ public class DeliveryOrderController {
                         "lng", order.getRestaurant().getAddress().getLongitude(),
                         "address", order.getRestaurant().getAddress().getState() + ", "
                                 + order.getRestaurant().getAddress().getCity()));
-            } else {
-                System.out.println("DEBUG: Restaurant address is NULL for order " + order.getId());
             }
 
-            // Delivery Location Parsing
             String deliveryAddrJson = order.getDeliveryAddressJson();
             if (deliveryAddrJson != null) {
                 try {
@@ -206,28 +188,20 @@ public class DeliveryOrderController {
                             "address", addrNode.path("address").asText()));
                 } catch (Exception e) {
                     map.put("dropLocation", Map.of("raw", deliveryAddrJson));
-                    System.out.println("DEBUG: Failed to parse delivery address JSON: " + e.getMessage());
                 }
-            } else {
-                System.out.println("DEBUG: Delivery address JSON is NULL for order " + order.getId());
             }
         } catch (Exception e) {
-            System.out.println("DEBUG: Error mapping locations: " + e.getMessage());
             e.printStackTrace();
         }
 
-        System.out.println("DEBUG: Mapped Order Response: " + map); // Log the final map
-
-        map.put("earnings", 35);
+        map.put("earnings", order.getRiderEarning() != null ? order.getRiderEarning() : 0.0);
         return map;
     }
 
     @PatchMapping("/{orderId}/picked-up")
     @PreAuthorize("hasRole('DELIVERY_PARTNER')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> markPickedUp(@PathVariable String orderId) {
-        Order order = orderRepository.findById(orderId).orElseThrow();
-        order.setStatus(OrderStatus.PICKED_UP);
-        orderRepository.save(order);
+        Order order = orderService.updateStatus(orderId, OrderStatus.PICKED_UP);
 
         Map<String, Object> response = mapOrderToResponse(order);
         if (order.getDeliveryPartner() != null) {
@@ -240,14 +214,9 @@ public class DeliveryOrderController {
     @PatchMapping("/{orderId}/delivered")
     @PreAuthorize("hasRole('DELIVERY_PARTNER')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> markDelivered(@PathVariable String orderId) {
-        Order order = orderRepository.findById(orderId).orElseThrow();
-        order.setStatus(OrderStatus.DELIVERED);
-        order.setDeliveredAt(LocalDateTime.now());
-        orderRepository.save(order);
+        Order order = orderService.updateStatus(orderId, OrderStatus.DELIVERED);
 
-        // Final update (or removal)
-        // Ideally we might want to clear the active order on frontend
-        Map<String, Object> response = mapOrderToResponse(order); // Status DELIVERED
+        Map<String, Object> response = mapOrderToResponse(order);
         if (order.getDeliveryPartner() != null) {
             dispatchService.sendOrderUpdate(order.getDeliveryPartner().getUserId(), response);
         }
@@ -262,8 +231,6 @@ public class DeliveryOrderController {
         String userId = getUserId(userDetails);
         var partner = deliveryPartnerRepository.findByUserId(userId).orElseThrow();
 
-        // Find orders by partner
-        // Ideally add findByDeliveryPartnerId to OrderRepository
         List<Order> orders = orderRepository.findAll().stream()
                 .filter(o -> o.getDeliveryPartner() != null && o.getDeliveryPartner().getId().equals(partner.getId()))
                 .filter(o -> o.getStatus() == OrderStatus.DELIVERED)
@@ -272,7 +239,7 @@ public class DeliveryOrderController {
         List<Map<String, Object>> res = orders.stream().map(o -> {
             Map<String, Object> map = new HashMap<>();
             map.put("orderId", o.getId());
-            map.put("earning", 35); // Fixed
+            map.put("earning", o.getRiderEarning() != null ? o.getRiderEarning() : 0.0);
             map.put("deliveredAt", o.getDeliveredAt());
             return map;
         }).collect(Collectors.toList());

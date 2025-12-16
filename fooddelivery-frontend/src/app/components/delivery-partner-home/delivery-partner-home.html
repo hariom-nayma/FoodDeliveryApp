@@ -114,6 +114,7 @@
 
             <!-- Stepper -->
             <div class="stepper">
+              <!-- Re-use existing stepper code... -->
               <div class="step">
                 <div class="step-circle completed">✓</div>
                 <span class="step-label">Picked</span>
@@ -139,6 +140,12 @@
                 </div>
                 <span class="step-label">Drop</span>
               </div>
+            </div>
+
+            <!-- COD Alert -->
+            <div *ngIf="currentOrder().paymentMethod === 'COD'" class="cod-alert" 
+                style="background: #ffebee; color: #c62828; padding: 12px; margin: 10px 0; border-radius: 8px; text-align: center; font-weight: bold; border: 1px solid #ef9a9a;">
+                💰 Cash to Collect: ₹{{ currentOrder().totalAmount }}
             </div>
 
             <div class="sheet-buttons">
@@ -182,19 +189,20 @@
         <h2 class="section-title">Earnings Wallet</h2>
 
         <!-- Total Card -->
+        <!-- Total Card -->
         <div *ngIf="earnings()" class="wallet-card">
           <div class="wallet-background"></div>
-          <p class="label">Total Balance</p>
-          <h1 class="balance">₹{{ earnings().totalEarnings | number:'1.0-0' }}</h1>
+          <p class="label">Net Payable (Payout)</p>
+          <h1 class="balance">₹{{ earnings().netPayable | number:'1.2-2' }}</h1>
 
           <div class="wallet-details">
             <div class="detail">
-              <p class="label">Completed</p>
-              <p class="value">{{ earnings().ordersCompleted }}</p>
+              <p class="label">Total Earnings</p>
+              <p class="value" style="color:#2ecc71">+₹{{ earnings().totalEarnings }}</p>
             </div>
             <div class="detail">
-              <p class="label">Incentives</p>
-              <p class="value green">+₹{{ earnings().incentives }}</p>
+              <p class="label">Cash Collected</p>
+              <p class="value" style="color:#e74c3c">-₹{{ earnings().cashCollected }}</p>
             </div>
           </div>
         </div>

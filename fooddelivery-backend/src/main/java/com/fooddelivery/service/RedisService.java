@@ -48,13 +48,34 @@ public class RedisService {
                 .collect(Collectors.toList());
     }
 
-    public boolean tryLock(String key, long timeoutSeconds) {
-        Boolean success = redisTemplate.opsForValue().setIfAbsent(key, "LOCKED",
+    public boolean tryLock(String key, String value, long timeoutSeconds) {
+        Boolean success = redisTemplate.opsForValue().setIfAbsent(key, value,
                 java.time.Duration.ofSeconds(timeoutSeconds));
         return Boolean.TRUE.equals(success);
     }
 
+    public boolean tryLock(String key, long timeoutSeconds) {
+        return tryLock(key, "LOCKED", timeoutSeconds);
+    }
+
     public void unlock(String key) {
         redisTemplate.delete(key);
+    }
+
+    public boolean unlock(String key, String value) {
+        String currentValue = redisTemplate.opsForValue().get(key);
+        if (value.equals(currentValue)) {
+            redisTemplate.delete(key);
+            return true;
+        }
+        return false;
+    }
+
+    public boolean isLocked(String key) {
+        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+    }
+
+    public String getLockValue(String key) {
+        return redisTemplate.opsForValue().get(key);
     }
 }

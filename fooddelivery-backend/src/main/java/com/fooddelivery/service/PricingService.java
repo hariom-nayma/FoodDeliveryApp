@@ -141,7 +141,8 @@ public class PricingService {
                 + (distanceKm * PER_KM)
                 + (durationMin * PER_MIN);
 
-        return payout * surgeMultiplier;
+        double total = payout * surgeMultiplier;
+        return Math.round(total * 100.0) / 100.0;
     }
 
     public double calculateCustomerFee(double distanceKm, double durationMin, double surgeMultiplier) {

@@ -15,7 +15,7 @@ public class OrderTrackingResponse {
     private String orderId;
     private String status;
     private LocalDateTime estimatedDeliveryTime;
-    
+
     // Locations
     private Location userLocation;
     private Location restaurantLocation;
@@ -27,6 +27,11 @@ public class OrderTrackingResponse {
     private String riderPhone;
     private String riderVehicleNumber;
     private String riderVehicleType;
+
+    // Payment Info
+    private Double totalAmount;
+    private String paymentMethod;
+    private String paymentStatus;
 
     @Data
     @Builder
