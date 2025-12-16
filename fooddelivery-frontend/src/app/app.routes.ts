@@ -35,6 +35,7 @@ export const routes: Routes = [
         data: { expectedRole: 'ROLE_DELIVERY_PARTNER' }
     },
     { path: 'cart', loadComponent: () => import('./components/cart/cart.component').then(m => m.CartComponent), canActivate: [authGuard] },
+    { path: 'subscription', loadComponent: () => import('./components/subscription/subscription.component').then(m => m.SubscriptionComponent), canActivate: [authGuard] },
     { path: 'join-delivery', loadComponent: () => import('./components/delivery-partner-signup/delivery-partner-signup').then(m => m.DeliveryPartnerSignup), canActivate: [authGuard] }, // Maybe public or auth needed
 
     // Owner Layout Routes

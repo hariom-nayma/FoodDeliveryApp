@@ -1,0 +1,156 @@
+.subscription-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+    background-color: #fceceb;
+    /* Brand light background */
+    padding: 20px;
+}
+
+.plan-card {
+    background: white;
+    padding: 2.5rem;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    position: relative;
+    border: 1px solid #ffecec;
+}
+
+.badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #FF6B6B, #FF4757);
+    color: white;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    box-shadow: 0 4px 10px rgba(255, 107, 107, 0.3);
+}
+
+.header h1 {
+    margin: 1rem 0 0.5rem;
+    color: #2d3436;
+    font-size: 1.8rem;
+}
+
+.price {
+    font-size: 3rem;
+    font-weight: 800;
+    color: #FF4757;
+    /* Brand Red */
+    margin: 0;
+}
+
+.period {
+    font-size: 1rem;
+    color: #636e72;
+    font-weight: 500;
+}
+
+.benefits {
+    margin: 2rem 0;
+    text-align: left;
+}
+
+.benefit-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #f1f2f6;
+}
+
+.benefit-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.icon {
+    font-size: 1.5rem;
+    margin-right: 1rem;
+    background: #fff0f0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.text strong {
+    display: block;
+    color: #2d3436;
+    margin-bottom: 0.2rem;
+}
+
+.text p {
+    color: #636e72;
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.btn-buy {
+    width: 100%;
+    padding: 1rem;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #FF6B6B, #FF4757);
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-buy:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 71, 87, 0.4);
+}
+
+.btn-buy:disabled {
+    background: #bdc3c7;
+    cursor: not-allowed;
+}
+
+.error-msg {
+    color: #d63031;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.terms {
+    margin-top: 1rem;
+    font-size: 0.75rem;
+    color: #b2bec3;
+}
+
+.active-plan-msg {
+    background: #e1ffe1;
+    border: 1px solid #00b894;
+    color: #00b894;
+    padding: 1rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+}
+
+.active-plan-msg h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1.2rem;
+}
+
+.active-plan-msg p {
+    margin: 0;
+    color: #2d3436;
+}
+
+.disabled-btn {
+    background: #b2bec3;
+    cursor: default;
+}

@@ -1,6 +1,7 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 export interface CartOptionResponse {
     groupName: string;
@@ -122,5 +123,9 @@ export class CartService {
                 if (res.success) this.cart.set(null);
             })
         ) as any;
+    }
+
+    calculatePrice(payload: any): Observable<any> {
+        return this.http.post(`${environment.apiUrl}/pricing/calculate`, payload);
     }
 }

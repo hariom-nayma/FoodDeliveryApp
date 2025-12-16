@@ -109,7 +109,13 @@ public class UserService {
     }
 
     private User getCurrentUser() {
-        String email = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String email;
+        if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+            email = ((org.springframework.security.core.userdetails.UserDetails) principal).getUsername();
+        } else {
+            email = principal.toString();
+        }
         return userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
     }
 
@@ -125,6 +131,7 @@ public class UserService {
                 .phone(user.getPhone())
                 .role(user.getRole())
                 .status(user.getStatus())
+                .premiumExpiry(user.getPremiumExpiry())
                 .build();
     }
 
@@ -140,5 +147,20 @@ public class UserService {
                 .longitude(address.getLongitude())
                 // .isDefault(address.isDefault())
                 .build();
+    }
+
+    @Transactional
+    public void upgradeToPremium(String userId) {
+        User user = userRepository.findById(userId).orElseThrow();
+        java.time.LocalDateTime currentExpiry = user.getPremiumExpiry();
+
+        if (currentExpiry != null && currentExpiry.isAfter(java.time.LocalDateTime.now())) {
+            // Extend
+            user.setPremiumExpiry(currentExpiry.plusMonths(3));
+        } else {
+            // New
+            user.setPremiumExpiry(java.time.LocalDateTime.now().plusMonths(3));
+        }
+        userRepository.save(user);
     }
 }

@@ -24,6 +24,7 @@ public class PricingService {
     private final RestaurantRepository restaurantRepository;
     private final AddressRepository addressRepository;
     private final OfferRepository offerRepository;
+    private final com.fooddelivery.repository.UserRepository userRepository;
 
     public PricingResponse calculatePrice(CalculatePriceRequest request) {
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
@@ -74,6 +75,15 @@ public class PricingService {
         // Let's assume on subtotal.
         tax = subtotal * 0.05;
 
+        // Fetch User to check Premium
+        boolean isPremium = false;
+        if (request.getUserId() != null) {
+            User user = userRepository.findById(request.getUserId()).orElse(null);
+            if (user != null && user.isPremium()) {
+                isPremium = true;
+            }
+        }
+
         // Delivery Fee
         double deliveryFee = 40.0;
         Address address = addressRepository.findById(request.getDeliveryAddressId())
@@ -88,6 +98,11 @@ public class PricingService {
             deliveryFee = 30; // Base
         } else {
             deliveryFee = 30 + (distance - 3) * 10;
+        }
+
+        // Premium Benefit: Free Delivery if Distance <= 7km AND Order > 199
+        if (isPremium && distance <= 7.0 && subtotal > 199.0) {
+            deliveryFee = 0.0;
         }
 
         // Ensure non-negative

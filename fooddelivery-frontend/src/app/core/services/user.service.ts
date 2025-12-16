@@ -39,4 +39,17 @@ export class UserService {
     deleteAddress(id: string): Observable<any> {
         return this.http.delete(`${this.apiUrl}/${id}`);
     }
+
+    // Subscription
+    initiateSubscription(): Observable<any> {
+        return this.http.post(`${environment.apiUrl}/subscription/initiate`, {});
+    }
+
+    verifySubscription(payload: any): Observable<any> {
+        return this.http.post(`${environment.apiUrl}/subscription/verify`, payload);
+    }
+
+    getUserProfile(): Observable<any> {
+        return this.http.get(`${environment.apiUrl}/users/me`);
+    }
 }

@@ -63,6 +63,7 @@ public class OrderService {
         priceReq.setItems(itemRequests);
         priceReq.setDeliveryAddressId(request.getDeliveryAddressId());
         priceReq.setOfferCode(request.getOfferCode());
+        priceReq.setUserId(userId);
 
         PricingResponse pricing = pricingService.calculatePrice(priceReq);
 
