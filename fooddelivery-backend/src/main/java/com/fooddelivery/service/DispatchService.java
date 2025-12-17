@@ -179,6 +179,7 @@ public class DispatchService {
 
         ScoredRider best = candidates.get(0);
         DeliveryPartner rider = best.getRider();
+        log.info("DISPATCH: Assigning Order {} to Rider {}", orderId, rider.getId());
         String riderLockKey = "rider_busy_" + rider.getId();
 
         // 6. Lock Rider First (The "One Order" Rule)

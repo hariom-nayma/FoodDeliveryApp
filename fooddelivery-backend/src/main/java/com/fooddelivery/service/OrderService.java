@@ -221,10 +221,12 @@ public class OrderService {
             } else {
                 log.warn("Delivery Partner is NULL for Earnings Order {}", orderId);
             }
-            
+
             // Unlock Rider
             if (order.getDeliveryPartner() != null) {
-                dispatchService.releaseRiderLock(order.getDeliveryPartner().getUserId());
+                log.info("Unlocking Rider {} for Order {}", order.getDeliveryPartner().getId(), orderId);
+                log.info("Delivery Partner User ID : {}", order.getDeliveryPartner().getUserId());
+                dispatchService.releaseRiderLock(order.getDeliveryPartner().getId());
             }
         }
 
@@ -244,12 +246,12 @@ public class OrderService {
         }
         if (order.getStatus() == OrderStatus.PENDING_PAYMENT || order.getStatus() == OrderStatus.PLACED) {
             order.setStatus(OrderStatus.CANCELLED);
-            
+
             // Unlock Rider if assigned (Rare for Placed/Pending, but good safety)
             if (order.getDeliveryPartner() != null) {
-                 dispatchService.releaseRiderLock(order.getDeliveryPartner().getUserId());
+                dispatchService.releaseRiderLock(order.getDeliveryPartner().getUserId());
             }
-            
+
             // Initiate refund if PAID
             return orderRepository.save(order);
         } else {
