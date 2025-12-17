@@ -130,7 +130,7 @@ public class DeliveryOrderController {
             deliveryAssignmentRepository.save(assignment);
             
             // Unlock Rider immediately
-            dispatchService.releaseRiderLock(assignment.getDeliveryPartner().getUserId());
+            dispatchService.releaseRiderLock(assignment.getDeliveryPartner().getId());
             
             // Unlock Dispatch Guard so new dispatch can start
             dispatchService.releaseDispatchGuard(assignment.getOrder().getId());

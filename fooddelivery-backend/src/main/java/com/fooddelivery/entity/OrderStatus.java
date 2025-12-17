@@ -12,6 +12,7 @@ public enum OrderStatus {
     RIDER_ACCEPTED, // New
     PICKED_UP,
     DELIVERED,
+    NO_RIDER_AVAILABLE, // Escalation State
     CANCELLED,
     REJECTED
 }

@@ -13,12 +13,20 @@ export class SocketService {
         this.socket.emit('join_room', `rider_${userId}`);
     }
 
+    joinUserRoom(userId: string) {
+        this.socket.emit('join_room', `user_${userId}`);
+    }
+
     onAssignmentRequest(): Observable<any> {
         return this.socket.fromEvent('assignment_request');
     }
 
     onOrderUpdate(): Observable<any> {
         return this.socket.fromEvent('order_update');
+    }
+
+    onOrderEscalated(): Observable<any> {
+        return this.socket.fromEvent('order_escalated');
     }
 
     // Generic emit/listen

@@ -65,7 +65,27 @@ public class DispatchService {
 
             // 0. Retry Safety Check
             if (attempt > MAX_ATTEMPTS) {
-                log.warn("DISPATCH: Max attempts reached for order {}. Manual attention required.", orderId);
+                log.warn("DISPATCH: Max attempts reached for order {}. Escalating to NO_RIDER_AVAILABLE.", orderId);
+
+                transactionTemplate.execute(status -> {
+                    Order order = orderRepository.findById(orderId).orElse(null);
+                    if (order != null) {
+                        order.setStatus(OrderStatus.NO_RIDER_AVAILABLE);
+                        orderRepository.save(order);
+
+                        // Notify User via Socket
+                        String room = "user_" + order.getUser().getId();
+                        if (socketIOServer.getRoomOperations(room) != null) {
+                            socketIOServer.getRoomOperations(room).sendEvent("order_escalated", Map.of(
+                                    "orderId", orderId,
+                                    "status", "NO_RIDER_AVAILABLE",
+                                    "message", "We are widening the search for a delivery partner."));
+                            log.info("Sent order_escalated event to {}", room);
+                        }
+                    }
+                    return null;
+                });
+
                 redisService.unlock("dispatch_in_progress_" + orderId); // Release Guard
                 return;
             }
@@ -90,7 +110,7 @@ public class DispatchService {
             redisService.unlock("dispatch_in_progress_" + orderId); // Release Guard on Error
         }
     }
-    
+
     // Extracted method to avoid lambda compilation issues
     private void doMatchingInTransaction(String orderId, long attempt, double effectiveRadius, double surgeMultiplier) {
         log.info("DISPATCH_STEP: Order={} Attempt={} Radius={} Surge={}", orderId, attempt, effectiveRadius,
@@ -323,7 +343,7 @@ public class DispatchService {
         // For now, force unlock is acceptable on delivery.
         redisService.unlock("rider_busy_" + riderId);
     }
-    
+
     public void releaseDispatchGuard(String orderId) {
         redisService.unlock("dispatch_in_progress_" + orderId);
         redisService.unlock("dispatch_attempt_" + orderId); // Actually delete() but unlock works if key is simple
