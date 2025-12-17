@@ -83,60 +83,36 @@ public class DeliveryOrderController {
             @RequestBody com.fooddelivery.dto.request.RespondAssignmentRequest request) {
 
         String userId = getUserId(userDetails);
-        DeliveryAssignment assignment = deliveryAssignmentRepository.findById(assignmentId)
-                .orElseThrow(() -> new RuntimeException("Assignment not found"));
 
-        if (!assignment.getDeliveryPartner().getUserId().equals(userId)) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Unauthorized", "UNAUTHORIZED"));
-        }
+        try {
+            if (request.isAccepted()) {
+                boolean success = dispatchService.acceptAssignment(assignmentId, userId);
 
-        if (!"PENDING".equals(assignment.getStatus())) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Assignment expired or already processed", "EXPIRED"));
-        }
+                if (!success) {
+                    return ResponseEntity.badRequest()
+                            .body(ApiResponse.error("Order already taken or expired", "ORDER_TAKEN"));
+                }
 
-        assignment.setRespondedAt(LocalDateTime.now());
+                // Fetch fresh order for response
+                DeliveryAssignment assignment = deliveryAssignmentRepository.findById(assignmentId).orElseThrow();
+                Order order = assignment.getOrder();
 
-        if (request.isAccepted()) {
-            Order order = assignment.getOrder();
-            if (order.getDeliveryPartner() != null) {
-                assignment.setStatus("EXPIRED");
-                deliveryAssignmentRepository.save(assignment);
-                return ResponseEntity.badRequest().body(ApiResponse.error("Order already taken", "ORDER_Taken"));
+                Map<String, Object> response = mapOrderToResponse(order);
+                dispatchService.sendOrderUpdate(userId, response);
+
+                // NOT releasing dispatch guard here. It should expire naturally or be cleaned
+                // up
+                // when order is delivered/cancelled. This prevents re-dispatch.
+
+                return ResponseEntity.ok(ApiResponse.success("Order Accepted", response));
+            } else {
+                dispatchService.rejectAssignment(assignmentId, userId);
+                return ResponseEntity.ok(ApiResponse.success("Order Rejected", Map.of("status", "REJECTED")));
             }
-
-            assignment.setStatus("ACCEPTED");
-            deliveryAssignmentRepository.save(assignment);
-
-            order.setDeliveryPartner(assignment.getDeliveryPartner());
-            order.setStatus(OrderStatus.ASSIGNED_TO_RIDER);
-
-            // Lock in the earning
-            if (assignment.getExpectedEarning() != null) {
-                order.setRiderEarning(assignment.getExpectedEarning());
-            }
-
-            orderRepository.save(order);
-
-            Map<String, Object> response = mapOrderToResponse(order);
-            dispatchService.sendOrderUpdate(assignment.getDeliveryPartner().getUserId(), response);
-            
-            // Release Dispatch Guard so future dispatches are clean (though order is taken now)
-            dispatchService.releaseDispatchGuard(order.getId());
-            
-            return ResponseEntity.ok(ApiResponse.success("Order Accepted", response));
-        } else {
-            assignment.setStatus("REJECTED");
-            deliveryAssignmentRepository.save(assignment);
-            
-            // Unlock Rider immediately
-            dispatchService.releaseRiderLock(assignment.getDeliveryPartner().getId());
-            
-            // Unlock Dispatch Guard so new dispatch can start
-            dispatchService.releaseDispatchGuard(assignment.getOrder().getId());
-            
-            dispatchService.dispatchOrder(assignment.getOrder().getId());
-            return ResponseEntity.ok(ApiResponse.success("Order Rejected", Map.of("status", "REJECTED")));
+        } catch (IllegalStateException e) { // Expired
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), "EXPIRED"));
+        } catch (RuntimeException e) { // Unauthorized or Not Found
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), "ERROR"));
         }
     }
 
@@ -152,7 +128,8 @@ public class DeliveryOrderController {
                 .collect(Collectors.toList());
 
         List<Order> orders = allPartnerOrders.stream()
-                .filter(o -> o.getStatus() == OrderStatus.RIDER_ACCEPTED || o.getStatus() == OrderStatus.ASSIGNED_TO_RIDER || o.getStatus() == OrderStatus.PICKED_UP)
+                .filter(o -> o.getStatus() == OrderStatus.RIDER_ACCEPTED
+                        || o.getStatus() == OrderStatus.ASSIGNED_TO_RIDER || o.getStatus() == OrderStatus.PICKED_UP)
                 .collect(Collectors.toList());
 
         List<Map<String, Object>> response = orders.stream()

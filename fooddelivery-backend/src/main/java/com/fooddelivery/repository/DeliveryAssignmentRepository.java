@@ -19,4 +19,7 @@ public interface DeliveryAssignmentRepository extends JpaRepository<DeliveryAssi
 
     java.util.List<DeliveryAssignment> findByOrderAndStatusIn(Order order, java.util.List<String> statuses);
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select a from DeliveryAssignment a where a.id = :id")
+    Optional<DeliveryAssignment> findByIdForUpdate(String id);
 }

@@ -348,4 +348,66 @@ public class DispatchService {
         redisService.unlock("dispatch_in_progress_" + orderId);
         redisService.unlock("dispatch_attempt_" + orderId); // Actually delete() but unlock works if key is simple
     }
+
+    @org.springframework.transaction.annotation.Transactional
+    public boolean acceptAssignment(String assignmentId, String userId) {
+        DeliveryAssignment assignment = deliveryAssignmentRepository.findByIdForUpdate(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Assignment not found"));
+
+        if (!assignment.getDeliveryPartner().getUserId().equals(userId)) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        if (!"PENDING".equals(assignment.getStatus())) {
+            throw new IllegalStateException("Assignment expired or already processed");
+        }
+
+        Order order = orderRepository.findByIdForUpdate(assignment.getOrder().getId())
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        if (order.getDeliveryPartner() != null) {
+            assignment.setStatus("EXPIRED");
+            deliveryAssignmentRepository.save(assignment);
+            return false;
+        }
+
+        assignment.setStatus("ACCEPTED");
+        assignment.setRespondedAt(LocalDateTime.now());
+        deliveryAssignmentRepository.save(assignment);
+
+        order.setDeliveryPartner(assignment.getDeliveryPartner());
+        order.setStatus(OrderStatus.ASSIGNED_TO_RIDER);
+        // Lock in the earning
+        if (assignment.getExpectedEarning() != null) {
+            order.setRiderEarning(assignment.getExpectedEarning());
+        }
+        orderRepository.save(order);
+
+        return true;
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void rejectAssignment(String assignmentId, String userId) {
+        DeliveryAssignment assignment = deliveryAssignmentRepository.findByIdForUpdate(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Assignment not found"));
+
+        if (!assignment.getDeliveryPartner().getUserId().equals(userId)) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        // Even if expired, we can mark as rejected if it was pending, or just ignore.
+        // If it's PENDING, we mark REJECTED.
+        if ("PENDING".equals(assignment.getStatus())) {
+            assignment.setStatus("REJECTED");
+            assignment.setRespondedAt(LocalDateTime.now());
+            deliveryAssignmentRepository.save(assignment);
+
+            // Unlock Rider immediately
+            releaseRiderLock(assignment.getDeliveryPartner().getId());
+
+            // NOTE: We do NOT release dispatch guard or restart dispatch here.
+            // The existing flow (timeout/retry) manages the lifecycle.
+            // Releasing guard would risk parallel dispatch.
+        }
+    }
 }
