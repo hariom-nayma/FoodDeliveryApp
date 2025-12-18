@@ -1,8 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, inject, effect } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { HeaderComponent } from './core/header/header.component';
 import { FooterComponent } from './core/footer/footer.component';
 import { ActiveOrderOverlayComponent } from './components/order/active-order-overlay.component';
+import { AuthService } from './core/auth/auth.service';
+import { SocketService } from './core/services/socket.service';
 
 @Component({
   selector: 'app-root',
@@ -20,4 +22,16 @@ import { ActiveOrderOverlayComponent } from './components/order/active-order-ove
 })
 export class AppComponent {
   title = 'fooddelivery-frontend';
+
+  private authService = inject(AuthService);
+  private socketService = inject(SocketService);
+
+  constructor() {
+    effect(() => {
+      const user = this.authService.currentUser();
+      if (user) {
+        this.socketService.joinUserRoom(user.id);
+      }
+    });
+  }
 }

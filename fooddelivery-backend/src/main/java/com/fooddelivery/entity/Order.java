@@ -59,8 +59,12 @@ public class Order extends BaseEntity {
     private Double deliveryFee;
     private Double totalAmount;
 
+    private Double riderEarning; // Amount payable to rider
+
     private String offerAppliedCode;
-    
+
+    private String paymentMethod; // COD or ONLINE
+
     // Razorpay Fields
     private String razorpayOrderId;
     private String paymentId;

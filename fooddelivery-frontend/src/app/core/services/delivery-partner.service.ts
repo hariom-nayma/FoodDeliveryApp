@@ -60,4 +60,8 @@ export class DeliveryPartnerService {
   getDailyEarnings(): Observable<any> {
     return this.http.get(`${this.ordersUrl}/earnings/daily`);
   }
+
+  getWalletSummary(riderId: string): Observable<any> {
+    return this.http.get(`${environment.apiUrl}/partners/wallet/${riderId}/summary`);
+  }
 }

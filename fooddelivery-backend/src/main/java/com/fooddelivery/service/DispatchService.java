@@ -4,6 +4,7 @@ import com.corundumstudio.socketio.SocketIOServer;
 import com.fooddelivery.entity.DeliveryAssignment;
 import com.fooddelivery.entity.DeliveryPartner;
 import com.fooddelivery.entity.Order;
+import com.fooddelivery.entity.OrderStatus;
 import com.fooddelivery.repository.DeliveryAssignmentRepository;
 import com.fooddelivery.repository.DeliveryPartnerRepository;
 import com.fooddelivery.repository.OrderRepository;
@@ -13,9 +14,11 @@ import org.springframework.stereotype.Service;
 
 import com.fooddelivery.dto.ScoredRider;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -38,161 +41,211 @@ public class DispatchService {
 
     private static final double INITIAL_SEARCH_RADIUS_KM = 3.0;
     private static final double MAX_SEARCH_RADIUS_KM = 12.0;
+    private static final int MAX_ATTEMPTS = 8;
 
     public void dispatchOrder(String orderId) {
-        // Run in background
-        log.info("Dispatching order: {}", orderId);
-        scheduler.execute(() -> executeMatchingStep(orderId, INITIAL_SEARCH_RADIUS_KM, 1.0));
+        String dispatchKey = "dispatch_in_progress_" + orderId;
+        // Prevent parallel dispatch pipelines: 3 minutes TTL
+        if (!redisService.tryLock(dispatchKey, 180)) {
+            log.warn("DISPATCH: Dispatch already in progress for order {}", orderId);
+            return;
+        }
+
+        log.info("DISPATCH: Starting dispatch for order {}", orderId);
+
+        // We increment at start of step.
+        executeMatchingStep(orderId, INITIAL_SEARCH_RADIUS_KM);
     }
 
-    private void executeMatchingStep(String orderId, double radiusKm, double surgeMultiplier) {
+    private void executeMatchingStep(String orderId, double radiusKm) {
         try {
-            // Check limits
-            if (radiusKm > MAX_SEARCH_RADIUS_KM) {
-                if (surgeMultiplier == 1.0) {
-                    log.info("Maximum radius reached. Retrying with Surge Pricing (10%)");
-                    // Reset to max radius, apply surge
-                    executeMatchingStep(orderId, MAX_SEARCH_RADIUS_KM, 1.10);
-                    return;
-                } else {
-                    log.warn("Failed to match order {} even with surge. Giving up.", orderId);
-                    // Optional: Mark order as MANUAL_ATTENTION
-                    return;
-                }
+            // Increment attempt counter in Redis
+            String attemptKey = "dispatch_attempt_" + orderId;
+            long attempt = redisService.increment(attemptKey);
+
+            // 0. Retry Safety Check
+            if (attempt > MAX_ATTEMPTS) {
+                log.warn("DISPATCH: Max attempts reached for order {}. Escalating to NO_RIDER_AVAILABLE.", orderId);
+
+                transactionTemplate.execute(status -> {
+                    Order order = orderRepository.findById(orderId).orElse(null);
+                    if (order != null) {
+                        order.setStatus(OrderStatus.NO_RIDER_AVAILABLE);
+                        orderRepository.save(order);
+
+                        // Notify User via Socket
+                        String room = "user_" + order.getUser().getId();
+                        if (socketIOServer.getRoomOperations(room) != null) {
+                            socketIOServer.getRoomOperations(room).sendEvent("order_escalated", Map.of(
+                                    "orderId", orderId,
+                                    "status", "NO_RIDER_AVAILABLE",
+                                    "message", "We are widening the search for a delivery partner."));
+                            log.info("Sent order_escalated event to {}", room);
+                        }
+                    }
+                    return null;
+                });
+
+                redisService.unlock("dispatch_in_progress_" + orderId); // Release Guard
+                return;
             }
 
+            // 1. Calculate Surge based on Attempt
+            double surgeMultiplier = Math.min(1.3, 1.0 + ((attempt - 1) * 0.1));
+
+            // Radius Logic: Expand every 2 attempts
+            double tempRadius = radiusKm;
+            if (attempt > 2)
+                tempRadius = Math.min(MAX_SEARCH_RADIUS_KM, radiusKm + 3.0);
+            final double effectiveRadius = tempRadius;
+
+            // Execute in transaction
             transactionTemplate.execute(status -> {
-                log.info("Matching Step: Order={} Radius={} Surge={}", orderId, radiusKm, surgeMultiplier);
-                Order order = orderRepository.findById(orderId).orElse(null);
-                if (order == null || order.getDeliveryPartner() != null) {
-                    log.warn("Order not found or already assigned. Stopping.");
-                    return null;
-                }
-
-                if (order.getRestaurant() == null || order.getRestaurant().getAddress() == null) {
-                    log.error("Order Restaurant or Address missing");
-                    return null;
-                }
-
-                // 1. Find nearby riders
-                double lat = order.getRestaurant().getAddress().getLatitude();
-                double lng = order.getRestaurant().getAddress().getLongitude();
-
-                List<String> candidateIds = redisService.findNearbyRiders(lat, lng, radiusKm, 20);
-                List<DeliveryPartner> candidates = deliveryPartnerRepository.findAllById(candidateIds);
-
-                // 2. Score Riders (Filtering Rejections)
-                List<ScoredRider> ranked = scoreAndRankCandidates(candidates, order, surgeMultiplier);
-
-                if (ranked.isEmpty()) {
-                    log.info("No valid candidates in {}km. Expanding...", radiusKm);
-                    // Schedule next step immediately (or with small delay)
-                    scheduler.execute(() -> executeMatchingStep(orderId, radiusKm + 3.0, surgeMultiplier));
-                    return null;
-                }
-
-                // 3. Attempt Assignment
-                attemptAssignment(ranked, orderId, radiusKm, surgeMultiplier);
+                doMatchingInTransaction(orderId, attempt, effectiveRadius, surgeMultiplier);
                 return null;
             });
 
         } catch (Exception e) {
             log.error("Error in executeMatchingStep: {}", e.getMessage(), e);
+            redisService.unlock("dispatch_in_progress_" + orderId); // Release Guard on Error
         }
+    }
+
+    // Extracted method to avoid lambda compilation issues
+    private void doMatchingInTransaction(String orderId, long attempt, double effectiveRadius, double surgeMultiplier) {
+        log.info("DISPATCH_STEP: Order={} Attempt={} Radius={} Surge={}", orderId, attempt, effectiveRadius,
+                surgeMultiplier);
+
+        Order order = orderRepository.findById(orderId).orElse(null);
+        if (order == null || order.getDeliveryPartner() != null) {
+            log.info("DISPATCH: Order {} already assigned or missing. Stopping.", orderId);
+            redisService.unlock("dispatch_in_progress_" + orderId); // Release Guard
+            return;
+        }
+
+        if (order.getRestaurant() == null || order.getRestaurant().getAddress() == null) {
+            log.error("DISPATCH: Order {} missing location data", orderId);
+            redisService.unlock("dispatch_in_progress_" + orderId); // Release Guard
+            return;
+        }
+
+        // 2. Find Candidates
+        double lat = order.getRestaurant().getAddress().getLatitude();
+        double lng = order.getRestaurant().getAddress().getLongitude();
+
+        List<String> candidateIds = redisService.findNearbyRiders(lat, lng, effectiveRadius, 30);
+
+        // 3. Filter Busy Riders (LOCK CHECK) & Anti-Spam
+        List<String> availableIds = candidateIds.stream()
+                .filter(id -> !redisService.isLocked("rider_busy_" + id))
+                .filter(id -> {
+                    // Anti-Spam: Check cooldown
+                    if (redisService.exists("reject_cooldown:" + orderId + ":" + id)) {
+                        return false;
+                    }
+                    // Anti-Spam: Check max rejects
+                    int rejects = redisService.getInt("reject_count:" + orderId + ":" + id);
+                    return rejects < 2;
+                })
+                .collect(Collectors.toList());
+
+        List<DeliveryPartner> candidates = deliveryPartnerRepository.findAllById(availableIds);
+
+        // 4. Score & Rank
+        List<ScoredRider> ranked = scoreAndRankCandidates(candidates, order, surgeMultiplier);
+
+        if (ranked.isEmpty()) {
+            log.info("DISPATCH: No valid candidates found. Scheduling retry.");
+            scheduler.schedule(() -> executeMatchingStep(orderId, effectiveRadius), 5, TimeUnit.SECONDS);
+            return;
+        }
+
+        // 5. Fairness & Assignment
+        int topN = Math.min(3, ranked.size());
+        List<ScoredRider> topCandidates = ranked.subList(0, topN);
+        Collections.shuffle(topCandidates);
+
+        attemptAssignment(topCandidates, orderId, effectiveRadius, (int) attempt, surgeMultiplier);
     }
 
     private List<ScoredRider> scoreAndRankCandidates(List<DeliveryPartner> candidates, Order order, double surge) {
         double restLat = order.getRestaurant().getAddress().getLatitude();
         double restLng = order.getRestaurant().getAddress().getLongitude();
 
-        // 1. Fetch Rejected/TimedOut IDs only if NOT in Surge mode
-        // If Surge is applied (> 1.0), we give them a second chance with higher pay.
-        java.util.Set<String> ignoreRiderIds = new java.util.HashSet<>();
-
-        if (surge <= 1.001) {
-            List<String> ignoreStatuses = List.of("REJECTED", "TIMED_OUT");
-            List<DeliveryAssignment> failedAssignments = deliveryAssignmentRepository.findByOrderAndStatusIn(order,
-                    ignoreStatuses);
-            ignoreRiderIds = failedAssignments.stream()
-                    .map(a -> a.getDeliveryPartner().getId())
-                    .collect(Collectors.toSet());
-
-            if (!ignoreRiderIds.isEmpty()) {
-                log.debug("Filtering out {} riders who rejected/timed out: {}", ignoreRiderIds.size(), ignoreRiderIds);
-            }
-        } else {
-            log.info("Surge applied ({}x). Including previously rejected/timed-out riders for retry.", surge);
-        }
-
-        // Need final variable for lambda
-        final java.util.Set<String> finalIgnoreIds = ignoreRiderIds;
+        // Anti-Spam is now handled in the stream filter above for efficiency
 
         return candidates.stream()
-                .filter(rider -> !finalIgnoreIds.contains(rider.getId())) // Filter rejected (if any)
                 .map(rider -> {
-                    // Use ORS or Estimate for metrics
                     double distKm = calculateDistance(restLat, restLng, rider.getCurrentLatitude(),
                             rider.getCurrentLongitude());
-                    double speedKmh = 30.0;
-                    double durationMin = (distKm / speedKmh) * 60;
+                    double durationMin = (distKm / 30.0) * 60;
+                    double score = scoringService.scoreRider(rider, distKm, durationMin,
+                            rider.getRatingAverage() != null ? rider.getRatingAverage() : 5.0, 0);
 
-                    double score = scoringService.scoreRider(
-                            rider, distKm, durationMin,
-                            rider.getRatingAverage() != null ? rider.getRatingAverage() : 5.0,
-                            rider.getTotalDeliveriesCompleted() != null ? 0 : 0);
-
-                    return ScoredRider.builder()
-                            .rider(rider)
-                            .score(score)
-                            .distanceKm(distKm)
-                            .durationMin(durationMin)
+                    return ScoredRider.builder().rider(rider).score(score).distanceKm(distKm).durationMin(durationMin)
                             .build();
                 })
-                .sorted(Comparator.comparing(ScoredRider::getScore).reversed()) // High score first
+                .sorted(Comparator.comparing(ScoredRider::getScore).reversed())
                 .collect(Collectors.toList());
     }
 
-    private void attemptAssignment(List<ScoredRider> candidates, String orderId, double radiusKm,
+    private void attemptAssignment(List<ScoredRider> candidates, String orderId, double radiusKm, int attempt,
             double surgeMultiplier) {
         if (candidates.isEmpty()) {
-            // All candidates in this radius/list exhausted. Expand radius.
-            log.info("Exhausted candidates. Expanding radius.");
-            scheduler.execute(() -> executeMatchingStep(orderId, radiusKm + 3.0, surgeMultiplier));
+            // Should not happen given logic above, but safety
+            scheduler.schedule(() -> executeMatchingStep(orderId, radiusKm), 2, TimeUnit.SECONDS);
             return;
         }
 
         ScoredRider best = candidates.get(0);
         DeliveryPartner rider = best.getRider();
+        log.info("DISPATCH: Assigning Order {} to Rider {}", orderId, rider.getId());
+        String riderLockKey = "rider_busy_" + rider.getId();
 
-        // 1. Lock to check and assign
-        String lockKey = "order_lock_" + orderId;
-        if (!redisService.tryLock(lockKey, 5)) {
-            // Retry this exact attempt in a moment? Or just skip to next?
-            // Safer to skip to prevent infinite lock loops if something is stuck.
-            attemptAssignment(candidates.subList(1, candidates.size()), orderId, radiusKm, surgeMultiplier);
+        // 6. Lock Rider First (The "One Order" Rule)
+        // Try to acquire lock for 45 mins (matches delivery time approx)
+        String lockToken = UUID.randomUUID().toString();
+        if (!redisService.tryLock(riderLockKey, lockToken, 45 * 60)) {
+            log.info("DISPATCH: Rider {} became busy. Trying next candidate.", rider.getId());
+            attemptAssignment(candidates.subList(1, candidates.size()), orderId, radiusKm, attempt, surgeMultiplier);
+            return;
+        }
+
+        // 7. Order Lock (Prevent double assignment)
+        String orderLockKey = "order_lock_" + orderId;
+        String orderToken = UUID.randomUUID().toString();
+        if (!redisService.tryLock(orderLockKey, orderToken, 10)) {
+            // Rollback rider lock
+            redisService.unlock(riderLockKey, lockToken);
+            // Retry later
+            scheduler.schedule(() -> executeMatchingStep(orderId, radiusKm), 1, TimeUnit.SECONDS);
             return;
         }
 
         boolean assigned = false;
         try {
-            // 2. Critical Section: Check state and create PENDING assignment
             assigned = transactionTemplate.execute(status -> {
                 Order freshOrder = orderRepository.findById(orderId).orElse(null);
                 if (freshOrder == null || freshOrder.getDeliveryPartner() != null) {
-                    return false; // Already assigned or invalid
+                    return false;
                 }
+
+                double payout = pricingService.calculatePayout(best.getDistanceKm(), best.getDurationMin(),
+                        surgeMultiplier);
 
                 DeliveryAssignment assignment = DeliveryAssignment.builder()
                         .order(freshOrder)
                         .deliveryPartner(rider)
                         .status("PENDING")
                         .assignedAt(LocalDateTime.now())
+                        .expectedEarning(payout)
                         .build();
-                deliveryAssignmentRepository.save(assignment);
+                assignment = deliveryAssignmentRepository.save(assignment); // Ensure ID is generated!
 
-                // Send Socket Event
-                double payout = pricingService.calculatePayout(best.getDistanceKm(), best.getDurationMin(),
-                        surgeMultiplier);
+                // CRITICAL: Update Order Status so we don't dispatch again immediately
+                freshOrder.setStatus(OrderStatus.OFFER_SENT);
+                orderRepository.save(freshOrder);
+
                 Map<String, Object> payload = Map.of(
                         "assignmentId", assignment.getId().toString(),
                         "orderId", freshOrder.getId(),
@@ -201,55 +254,68 @@ public class DispatchService {
                         "pickupLat", freshOrder.getRestaurant().getAddress().getLatitude(),
                         "pickupLng", freshOrder.getRestaurant().getAddress().getLongitude(),
                         "distanceKm", best.getDistanceKm(),
-                        "eta", (int) best.getDurationMin());
+                        "eta", (int) best.getDurationMin(),
+                        "surge", surgeMultiplier > 1.0);
 
                 if (socketIOServer.getRoomOperations("rider_" + rider.getUserId()) != null) {
                     socketIOServer.getRoomOperations("rider_" + rider.getUserId())
                             .sendEvent("assignment_request", payload);
                 }
-
                 return true;
             });
         } finally {
-            redisService.unlock(lockKey);
+            redisService.unlock(orderLockKey, orderToken);
+            if (!assigned) {
+                // If assignment failed (e.g. database error or validation), unlock rider
+                redisService.unlock(riderLockKey, lockToken);
+            }
         }
 
         if (!assigned) {
-            // Race condition or order taken. Stop this chain.
+            redisService.unlock("dispatch_in_progress_" + orderId); // Release guard if failed assignment
             return;
         }
 
-        // 3. Schedule Async Timeout Check (15s)
+        // 8. Wait for Response (Async Timeout)
+        final String finalLockToken = lockToken;
         scheduler.schedule(() -> {
             transactionTemplate.execute(status -> {
-                Order currentOrder = orderRepository.findById(orderId).orElse(null);
-                if (currentOrder == null || currentOrder.getDeliveryPartner() != null)
-                    return null;
+                // Re-verify assignment status
+                // If still PENDING -> TIMEOUT
+                // If TIMEOUT -> Unlock Rider & Retry
 
-                // Check PENDING assignments
-                List<DeliveryAssignment> allAssignments = deliveryAssignmentRepository.findByOrder(currentOrder);
-                boolean timedOut = false;
+                // We need to fetch the assignment again
+                DeliveryAssignment pa = deliveryAssignmentRepository.findByOrderAndStatusIn(
+                        orderRepository.findById(orderId).orElseThrow(), List.of("PENDING"))
+                        .stream().filter(a -> a.getDeliveryPartner().getId().equals(rider.getId()))
+                        .findFirst().orElse(null);
 
-                for (DeliveryAssignment pa : allAssignments) {
-                    if ("PENDING".equalsIgnoreCase(pa.getStatus()) &&
-                            pa.getDeliveryPartner().getId().equals(rider.getId())) {
+                if (pa != null) {
+                    log.info("DISPATCH: Timeout for rider {}. Re-dispatching.", rider.getId());
+                    pa.setStatus("TIMED_OUT");
+                    pa.setRespondedAt(LocalDateTime.now());
+                    deliveryAssignmentRepository.save(pa);
 
-                        pa.setStatus("TIMED_OUT");
-                        pa.setRespondedAt(LocalDateTime.now());
-                        deliveryAssignmentRepository.save(pa);
-                        timedOut = true;
-                        log.info("Assignment timed out for rider {}. Re-dispatching.", rider.getId());
+                    // Anti-Spam: Record Rejection/Timeout
+                    redisService.increment("reject_count:" + orderId + ":" + rider.getId());
+                    redisService.tryLock("reject_cooldown:" + orderId + ":" + rider.getId(), "1", 30); // 30s cooldown
+
+                    // Revert Order Status so it can be picked up again
+                    Order o = orderRepository.findById(orderId).orElse(null);
+                    if (o != null) {
+                        o.setStatus(OrderStatus.SEARCHING_RIDER); // Revert status
+                        orderRepository.save(o);
                     }
-                }
 
-                // 4. Retry Dispatch (Fresh Search) if we timed out
-                // We do NOT recurse with stale list. We start fresh to find best available NOW.
-                if (timedOut) {
-                    dispatchOrder(orderId);
+                    // Release Rider Lock
+                    redisService.unlock(riderLockKey, finalLockToken);
+
+                    // Trigger Next Attempt
+                    executeMatchingStep(orderId, radiusKm);
                 }
                 return null;
             });
-        }, 15, TimeUnit.SECONDS); // 15s Timeout
+        }, 15, TimeUnit.SECONDS);
     }
 
     private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
@@ -271,6 +337,77 @@ public class DispatchService {
     }
 
     public void releaseRiderLock(String riderId) {
+        // Warning: This is a "force unlock". Ideally we should use the token,
+        // but for delivery completion we assume we are the owner.
+        // Or we can store the token in the Order entity if we want to be strict.
+        // For now, force unlock is acceptable on delivery.
         redisService.unlock("rider_busy_" + riderId);
+    }
+
+    public void releaseDispatchGuard(String orderId) {
+        redisService.unlock("dispatch_in_progress_" + orderId);
+        redisService.unlock("dispatch_attempt_" + orderId); // Actually delete() but unlock works if key is simple
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public boolean acceptAssignment(String assignmentId, String userId) {
+        DeliveryAssignment assignment = deliveryAssignmentRepository.findByIdForUpdate(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Assignment not found"));
+
+        if (!assignment.getDeliveryPartner().getUserId().equals(userId)) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        if (!"PENDING".equals(assignment.getStatus())) {
+            throw new IllegalStateException("Assignment expired or already processed");
+        }
+
+        Order order = orderRepository.findByIdForUpdate(assignment.getOrder().getId())
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        if (order.getDeliveryPartner() != null) {
+            assignment.setStatus("EXPIRED");
+            deliveryAssignmentRepository.save(assignment);
+            return false;
+        }
+
+        assignment.setStatus("ACCEPTED");
+        assignment.setRespondedAt(LocalDateTime.now());
+        deliveryAssignmentRepository.save(assignment);
+
+        order.setDeliveryPartner(assignment.getDeliveryPartner());
+        order.setStatus(OrderStatus.ASSIGNED_TO_RIDER);
+        // Lock in the earning
+        if (assignment.getExpectedEarning() != null) {
+            order.setRiderEarning(assignment.getExpectedEarning());
+        }
+        orderRepository.save(order);
+
+        return true;
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void rejectAssignment(String assignmentId, String userId) {
+        DeliveryAssignment assignment = deliveryAssignmentRepository.findByIdForUpdate(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Assignment not found"));
+
+        if (!assignment.getDeliveryPartner().getUserId().equals(userId)) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        // Even if expired, we can mark as rejected if it was pending, or just ignore.
+        // If it's PENDING, we mark REJECTED.
+        if ("PENDING".equals(assignment.getStatus())) {
+            assignment.setStatus("REJECTED");
+            assignment.setRespondedAt(LocalDateTime.now());
+            deliveryAssignmentRepository.save(assignment);
+
+            // Unlock Rider immediately
+            releaseRiderLock(assignment.getDeliveryPartner().getId());
+
+            // NOTE: We do NOT release dispatch guard or restart dispatch here.
+            // The existing flow (timeout/retry) manages the lifecycle.
+            // Releasing guard would risk parallel dispatch.
+        }
     }
 }

@@ -359,8 +359,16 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
   }
 
   markDelivered() {
-    if (!this.currentOrder()) return;
-    this.deliveryService.markDelivered(this.currentOrder().orderId).subscribe(res => {
+    const order = this.currentOrder();
+    if (!order) return;
+
+    if (order.paymentMethod === 'COD' && order.paymentStatus !== 'PAID') {
+      if (!confirm(`💰 CASH ON DELIVERY\n\nPlease collect ₹${order.totalAmount} from the customer.\n\nConfirm cash received?`)) {
+        return;
+      }
+    }
+
+    this.deliveryService.markDelivered(order.orderId).subscribe(res => {
       this.message.set('Order Delivered! 🎉');
       this.currentOrder.set(null); // Clear active
       this.activeTab.set('requests');
@@ -372,6 +380,9 @@ export class DeliveryPartnerHome implements OnInit, OnDestroy {
   }
 
   fetchEarnings() {
-    this.deliveryService.getDailyEarnings().subscribe(res => this.earnings.set(res.data));
+    if (!this.userId()) return;
+    this.deliveryService.getWalletSummary(this.userId()).subscribe(res => {
+         this.earnings.set(res.data);
+    });
   }
 }

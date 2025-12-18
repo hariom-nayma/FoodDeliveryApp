@@ -23,7 +23,7 @@ export class CartComponent implements OnInit {
 
     addresses = signal<any[]>([]);
     selectedAddressId = signal<string>('');
-    paymentMethod = signal<string>('COD');
+    paymentMethod: string = 'COD';
     placingOrder = signal(false);
     pricing = signal<any>(null);
 
@@ -105,7 +105,7 @@ export class CartComponent implements OnInit {
         const cartId = this.cartService.cart()?.cartId;
         if (!cartId) return;
 
-        this.orderService.createOrder(cartId, this.selectedAddressId(), this.paymentMethod()).subscribe({
+        this.orderService.createOrder(cartId, this.selectedAddressId(), this.paymentMethod).subscribe({
             next: (order) => {
                 if (order.razorpayOrderId) {
                     this.initRazorpay(order);

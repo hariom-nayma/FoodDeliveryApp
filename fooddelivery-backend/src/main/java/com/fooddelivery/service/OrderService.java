@@ -23,6 +23,7 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class OrderService {
 
     private final OrderRepository orderRepository;
@@ -34,6 +35,7 @@ public class OrderService {
     private final UserRepository userRepo;
     private final DispatchService dispatchService;
     private final PaymentService paymentService;
+    private final WalletService walletService;
 
     @Transactional
     public Order createOrder(String userId, CreateOrderRequest request) {
@@ -83,6 +85,7 @@ public class OrderService {
                 .status("COD".equalsIgnoreCase(request.getPaymentMethod()) ? OrderStatus.PLACED
                         : OrderStatus.PENDING_PAYMENT)
                 .paymentStatus(PaymentStatus.PENDING)
+                .paymentMethod(request.getPaymentMethod())
                 .orderType(OrderType.DELIVERY) // Assume delivery for now
                 .estimatedDeliveryTime(LocalDateTime.now().plusMinutes(pricing.getEtaMinutes()))
                 .subtotalAmount(pricing.getSubtotal())
@@ -157,9 +160,74 @@ public class OrderService {
     public Order updateStatus(String orderId, OrderStatus status) {
         Order order = getOrder(orderId);
         // Validations can go here (state machine)
+
+        if (order.getStatus().equals(status)) {
+            throw new RuntimeException("Order status is already " + status);
+        }
+
+        if (status == OrderStatus.READY_FOR_PICKUP && (order.getStatus().equals(OrderStatus.PICKED_UP)
+                || order.getStatus().equals(OrderStatus.DELIVERED))) {
+            throw new RuntimeException("Order status is not valid for " + status);
+        }
+
+        // Handle COD Payment on Delivery
+        if (status == OrderStatus.DELIVERED) {
+            log.info("Processing DELIVERED status for Order: {}", orderId);
+            log.info("Payment Method: '{}'", order.getPaymentMethod());
+            log.info("Delivery Partner: {}",
+                    order.getDeliveryPartner() != null ? order.getDeliveryPartner().getId() : "NULL");
+
+            if ("COD".equalsIgnoreCase(order.getPaymentMethod())) {
+                order.setPaymentStatus(PaymentStatus.PAID);
+                // 1. Log Cash Collection (Debit)
+                if (order.getDeliveryPartner() != null) {
+                    log.info("Adding COD Collection Entry to Ledger");
+                    walletService.addEntry(
+                            order.getDeliveryPartner().getUserId(),
+                            -order.getTotalAmount(),
+                            RiderLedger.LedgerType.COLLECTION,
+                            order.getId(),
+                            "Cash Collected for Order #" + order.getId());
+                } else {
+                    log.warn("Delivery Partner is NULL for COD Order {}", orderId);
+                }
+            }
+        }
+
         order.setStatus(status);
         if (status == OrderStatus.DELIVERED) {
             order.setDeliveredAt(LocalDateTime.now());
+
+            // 2. Log Earning (Credit)
+            if (order.getDeliveryPartner() != null) {
+                // Use the locked-in earning from assignment
+                double earning = order.getRiderEarning() != null ? order.getRiderEarning() : 0.0;
+
+                if (earning == 0.0) {
+                    // Fallback if missing (shouldn't happen for new orders)
+                    double dist = 5.0;
+                    earning = pricingService.calculatePayout(dist, 30, 1.0);
+                    log.warn("RiderEarning missing for order {}. Using fallback calculation: {}", orderId, earning);
+                }
+
+                log.info("Adding Earning Entry to Ledger: {}", earning);
+
+                walletService.addEntry(
+                        order.getDeliveryPartner().getUserId(),
+                        earning,
+                        RiderLedger.LedgerType.EARNING,
+                        order.getId(),
+                        "Ride Earnings for Order #" + order.getId());
+            } else {
+                log.warn("Delivery Partner is NULL for Earnings Order {}", orderId);
+            }
+
+            // Unlock Rider
+            if (order.getDeliveryPartner() != null) {
+                log.info("Unlocking Rider {} for Order {}", order.getDeliveryPartner().getId(), orderId);
+                log.info("Delivery Partner User ID : {}", order.getDeliveryPartner().getUserId());
+                dispatchService.releaseRiderLock(order.getDeliveryPartner().getId());
+            }
         }
 
         // Trigger Dispatch if Cooking
@@ -178,6 +246,12 @@ public class OrderService {
         }
         if (order.getStatus() == OrderStatus.PENDING_PAYMENT || order.getStatus() == OrderStatus.PLACED) {
             order.setStatus(OrderStatus.CANCELLED);
+
+            // Unlock Rider if assigned (Rare for Placed/Pending, but good safety)
+            if (order.getDeliveryPartner() != null) {
+                dispatchService.releaseRiderLock(order.getDeliveryPartner().getUserId());
+            }
+
             // Initiate refund if PAID
             return orderRepository.save(order);
         } else {
@@ -299,6 +373,9 @@ public class OrderService {
                 .riderPhone(riderPhone)
                 .riderVehicleNumber(riderVehicle)
                 .riderVehicleType(riderVehicleType)
+                .totalAmount(order.getTotalAmount())
+                .paymentMethod(order.getPaymentMethod())
+                .paymentStatus(order.getPaymentStatus() != null ? order.getPaymentStatus().toString() : "PENDING")
                 .build();
     }
 }
