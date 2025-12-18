@@ -75,3 +75,9 @@
 } @else {
 <div style="padding: 4rem; text-align: center;">Loading...</div>
 }
+
+@if (selectedItemForCustomization()) {
+<app-customize-item-dialog [item]="selectedItemForCustomization()!" (close)="selectedItemForCustomization.set(null)"
+    (addToCart)="handleCustomizationComplete($event)">
+</app-customize-item-dialog>
+}

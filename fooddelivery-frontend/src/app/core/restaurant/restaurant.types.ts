@@ -61,6 +61,20 @@ export interface RestaurantStatusUpdateRequest {
     reason?: string;
 }
 
+export interface Option {
+    id: string;
+    label: string;
+    extraPrice: number;
+}
+
+export interface OptionGroup {
+    id: string;
+    name: string;
+    multiSelect: boolean;
+    required: boolean;
+    options: Option[];
+}
+
 export interface MenuItem {
     id: string;
     name: string;
@@ -70,9 +84,10 @@ export interface MenuItem {
     imageUrl: string;
     categoryId: string;
     available?: boolean;
+    optionGroups?: OptionGroup[];
 }
 
-   export interface Category {
+export interface Category {
     id: string;
     name: string;
     restaurantId?: string;

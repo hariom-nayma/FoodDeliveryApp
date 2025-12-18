@@ -5,10 +5,10 @@ import { AddCategoryDialogComponent } from './add-category-dialog.component';
 import { AddMenuItemDialogComponent } from './add-menu-item-dialog.component';
 
 @Component({
-  selector: 'app-menu-management',
-  standalone: true,
-  imports: [AddCategoryDialogComponent, AddMenuItemDialogComponent],
-  template: `
+    selector: 'app-menu-management',
+    standalone: true,
+    imports: [AddCategoryDialogComponent, AddMenuItemDialogComponent],
+    template: `
     <div class="container">
         <header>
             <h2>Menu Management</h2>
@@ -48,11 +48,21 @@ import { AddMenuItemDialogComponent } from './add-menu-item-dialog.component';
                 <div class="list">
                      @for (item of items(); track item.id) {
                         <div class="item-card">
-                            <img [src]="item.imageUrl || 'assets/placeholder.png'" width="50" height="50">
+                            <img [src]="item.imageUrl || 'assets/placeholder-food.jpg'" width="60" height="60" (error)="$event.target.src='assets/placeholder-food.jpg'">
                             <div class="details">
-                                <h4>{{ item.name }}</h4>
+                                <div class="item-header">
+                                    <h4>{{ item.name }}</h4>
+                                    <span class="badge" [class.inactive]="!item.available">{{ item.available ? 'Available' : 'Unavailable' }}</span>
+                                </div>
                                 <p>{{ item.description }}</p>
                                 <span class="price">₹{{ item.basePrice }}</span>
+                            </div>
+                            <div class="item-actions">
+                                <label class="switch">
+                                    <input type="checkbox" [checked]="item.available" (change)="toggleAvailability(item)">
+                                    <span class="slider round"></span>
+                                </label>
+                                <button class="btn-icon" (click)="editItem(item)" title="Edit">✏️</button>
                             </div>
                         </div>
                     }
@@ -81,7 +91,7 @@ import { AddMenuItemDialogComponent } from './add-menu-item-dialog.component';
         }
     </div>
   `,
-  styles: [`
+    styles: [`
     .container { padding: 1rem; }
     header { margin-bottom: 2rem; }
     .tabs { display: flex; gap: 1rem; border-bottom: 1px solid #ddd; margin-top: 1rem; }
@@ -98,7 +108,19 @@ import { AddMenuItemDialogComponent } from './add-menu-item-dialog.component';
     .details h4 { margin: 0 0 0.25rem; }
     .details p { margin: 0 0 0.5rem; font-size: 0.9rem; color: #666; }
     .empty-state { text-align: center; color: #888; padding: 2rem; }
-    img { object-fit: cover; border-radius: 4px; }
+    img { object-fit: cover; border-radius: 4px; background: #eee; }
+    .item-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
+    .item-actions { display: flex; align-items: center; gap: 1rem; }
+    .btn-icon { background: none; border: 1px solid #ddd; padding: 0.4rem; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
+    .btn-icon:hover { background: #f0f0f0; border-color: #ccc; }
+
+    /* Toggle Switch */
+    .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+    .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+    input:checked + .slider { background-color: #2196F3; }
+    input:checked + .slider:before { transform: translateX(18px); }
   `]
 })
 export class MenuManagementComponent implements OnInit {
@@ -117,8 +139,8 @@ export class MenuManagementComponent implements OnInit {
     ngOnInit() {
         const parts = window.location.pathname.split('/');
         const idx = parts.indexOf('manage');
-        if (idx !== -1 && parts[idx+1]) {
-            this.restaurantId = parts[idx+1];
+        if (idx !== -1 && parts[idx + 1]) {
+            this.restaurantId = parts[idx + 1];
             this.loadData();
         }
     }
@@ -137,7 +159,6 @@ export class MenuManagementComponent implements OnInit {
             next: (res) => {
                 if (res.success) {
                     this.loadData();
-                    this.showCategoryDialog.set(false);
                 }
             },
             error: (err) => alert('Failed to create category')
@@ -149,8 +170,35 @@ export class MenuManagementComponent implements OnInit {
         this.showItemDialog.set(true);
     }
 
+    toggleAvailability(item: any) {
+        const newState = !item.available;
+        // Construct request with existing data but new availability
+        // We omit optionGroups to preserve them (as per backend logic)
+        const request = {
+            name: item.name,
+            description: item.description,
+            basePrice: item.basePrice,
+            categoryId: item.categoryId,
+            foodType: item.foodType,
+            available: newState
+        };
+
+        this.menuService.updateMenuItem(this.restaurantId, item.id, request).subscribe({
+            next: (res) => {
+                if (res.success) {
+                    // Optimistic update or reload
+                    this.loadData();
+                }
+            },
+            error: (err) => {
+                alert('Failed to update availability');
+                console.error(err);
+            }
+        });
+    }
+
     saveItem(event: { itemData: any, imageFile?: File }) {
-        const obs = this.selectedItem() 
+        const obs = this.selectedItem()
             ? this.menuService.updateMenuItem(this.restaurantId, this.selectedItem().id, event.itemData, event.imageFile)
             : this.menuService.createMenuItem(this.restaurantId, event.itemData, event.imageFile);
 

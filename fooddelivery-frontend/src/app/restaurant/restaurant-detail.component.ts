@@ -1,15 +1,15 @@
 import { Component, inject, signal, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RestaurantService } from '../core/services/restaurant.service';
-import { Category, MenuItem, Restaurant } from '../core/restaurant/restaurant.types';
+import { Category, MenuItem, Restaurant, Option } from '../core/restaurant/restaurant.types';
 import { CartService } from '../core/services/cart.service';
-
 import { RouterLink } from '@angular/router';
+import { CustomizeItemDialogComponent } from './components/customize-item-dialog.component';
 
 @Component({
   selector: 'app-restaurant-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, CustomizeItemDialogComponent],
   templateUrl: './restaurant-detail.component.html',
   styleUrl: './restaurant-detail.component.css'
 })
@@ -22,6 +22,8 @@ export class RestaurantDetailComponent implements OnInit {
   restaurant = signal<Restaurant | null>(null);
   categories = signal<Category[]>([]);
   menuItems = signal<MenuItem[]>([]);
+
+  selectedItemForCustomization = signal<MenuItem | null>(null);
 
   ngOnInit() {
     if (this.id) {
@@ -36,32 +38,46 @@ export class RestaurantDetailComponent implements OnInit {
   }
 
   getItemsByCategory(categoryId: string) {
-    return this.menuItems().filter(item => item.categoryId === categoryId);
+    return this.menuItems()
+      .filter(item => item.categoryId === categoryId && item.available);
   }
 
   addToCart(item: MenuItem) {
+    // If item has options, open customization dialog
+    if (item.optionGroups && item.optionGroups.length > 0) {
+      this.selectedItemForCustomization.set(item);
+      return;
+    }
+
+    // Otherwise add directly
+    this.processAddToCart(item, [], item.basePrice);
+  }
+
+  handleCustomizationComplete(event: { item: MenuItem, selectedOptions: { groupId: string, option: Option }[], totalPrice: number }) {
+    this.selectedItemForCustomization.set(null); // Close dialog
+    this.processAddToCart(event.item, event.selectedOptions, event.totalPrice);
+  }
+
+  processAddToCart(item: MenuItem, options: { groupId: string, option: Option }[], finalPrice: number) {
     const r = this.restaurant();
     if (!r) return;
-
-    // For now, handling simple add without options. 
-    // If options needed, we should open a dialog.
-    // Assuming simple item for MVP if options property logic is pending.
 
     this.cartService.addToCart({
       restaurantId: r.id,
       itemId: item.id,
       quantity: 1,
-      options: [] // Empty for now, update when option dialog ready
+      options: options.map(o => ({
+        groupId: o.groupId,
+        optionId: o.option.id
+      }))
     }).subscribe({
       next: () => {
-        // Maybe show specific toast? Global error handler or service might handle generic feedback?
-        // Since we use signals in CartService, header auto-updates.
-        alert('Item added to cart!'); // Simple feedback for now
+        // Optional: Toast or subtle animation
+        console.log('Added to cart');
       },
       error: (err) => {
-        // Basic error handling
         console.error(err);
-        alert('Failed to add item to cart. ' + (err.error?.message || ''));
+        alert('Failed to add to cart');
       }
     });
   }

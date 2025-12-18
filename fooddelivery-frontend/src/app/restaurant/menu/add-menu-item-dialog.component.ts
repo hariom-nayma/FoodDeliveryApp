@@ -85,8 +85,8 @@ import { Category } from './menu.service';
                         <div formArrayName="options" class="options-list">
                             @for (opt of getOptions(group).controls; track $index) {
                                 <div [formGroupName]="$index" class="option-row">
-                                    <input type="text" formControlName="name" placeholder="Option Name">
-                                    <input type="number" formControlName="additionalPrice" placeholder="Price">
+                                    <input type="text" formControlName="label" placeholder="Option Name">
+                                    <input type="number" formControlName="extraPrice" placeholder="Price">
                                     <button type="button" class="btn-icon" (click)="removeOption($index, group)">✕</button>
                                 </div>
                             }
@@ -179,8 +179,8 @@ export class AddMenuItemDialogComponent {
           if (g.options) {
             g.options.forEach((o: any) => {
               (group.get('options') as FormArray).push(this.fb.group({
-                name: [o.label || o.name, Validators.required], // Backend sends label?
-                additionalPrice: [o.extraPrice || o.additionalPrice || 0, Validators.min(0)],
+                label: [o.label || o.name, Validators.required],
+                extraPrice: [o.extraPrice || o.additionalPrice || 0, Validators.min(0)],
                 available: [true]
               }));
             });
@@ -238,8 +238,8 @@ export class AddMenuItemDialogComponent {
 
   createOption() {
     return this.fb.group({
-      name: ['', Validators.required],
-      additionalPrice: [0, Validators.min(0)],
+      label: ['', Validators.required],
+      extraPrice: [0, Validators.min(0)],
       available: [true]
     });
   }
