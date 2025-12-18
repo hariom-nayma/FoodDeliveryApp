@@ -22,22 +22,13 @@ export class OrderService {
         }).pipe(map(res => res.data));
     }
 
-    getMyOrders(): Observable<any[]> {
-        return this.http.get<any>(`${this.apiUrl}/my`).pipe(map(res => res.data));
+    getMyOrders(page: number = 0, size: number = 10): Observable<any> {
+        return this.http.get<any>(`${this.apiUrl}/my?page=${page}&size=${size}`).pipe(map(res => res.data));
     }
 
     // For Restaurant
-    getRestaurantOrders(restaurantId: string): Observable<any[]> {
-        // Backend verification needed: Assuming RestaurantController has this, or OrderController?
-        // Actually, RestaurantController.java didn't show getOrders for restaurant.
-        // I might need to implement logic to fetch restaurant orders if backend is missing it, 
-        // OR filtering logic. 
-        // Wait, OrderController has no 'getRestaurantOrders'.
-        // I will assume for now I need to fetch all orders if Role is Owner, or use a specific endpoint.
-        // Actually, RestaurantController logic usually involves order management.
-        // I will add 'getOrders' to RestaurantController in backend if needed.
-        // For now, I'll put the stub here.
-        return this.http.get<any>(`/api/v1/restaurants/${restaurantId}/orders`).pipe(map(res => res.data));
+    getRestaurantOrders(restaurantId: string, page: number = 0, size: number = 10): Observable<any> {
+        return this.http.get<any>(`/api/v1/restaurants/${restaurantId}/orders?page=${page}&size=${size}`).pipe(map(res => res.data));
     }
 
     updateOrderStatus(orderId: string, status: string): Observable<any> {

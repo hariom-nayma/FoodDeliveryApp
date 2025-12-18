@@ -36,6 +36,7 @@ public class OrderService {
     private final DispatchService dispatchService;
     private final PaymentService paymentService;
     private final WalletService walletService;
+    private final WhatsAppService whatsAppService;
 
     @Transactional
     public Order createOrder(String userId, CreateOrderRequest request) {
@@ -104,7 +105,7 @@ public class OrderService {
             order.setRazorpayOrderId(rzpOrderId);
         }
 
-        Order savedOrder = orderRepository.save(order);
+        Order saved = orderRepository.save(order);
 
         // 3. Save Items
         List<OrderItem> orderItems = cart.getItems().stream().map(cartItem -> {
@@ -115,7 +116,7 @@ public class OrderService {
             }
 
             return OrderItem.builder()
-                    .order(savedOrder)
+                    .order(saved)
                     .menuItemId(cartItem.getMenuItem().getId())
                     .name(cartItem.getMenuItem().getName())
                     .quantity(cartItem.getQuantity())
@@ -132,7 +133,10 @@ public class OrderService {
         // 4. Clear Cart
         cartService.clearCart(userId);
 
-        return savedOrder;
+        // Notify WhatsApp
+        whatsAppService.sendOrderPlacedNotification(saved);
+
+        return saved;
     }
 
     @Transactional
@@ -179,7 +183,7 @@ public class OrderService {
 
             if ("COD".equalsIgnoreCase(order.getPaymentMethod())) {
                 order.setPaymentStatus(PaymentStatus.PAID);
-                // 1. Log Cash Collection (Debit)
+
                 if (order.getDeliveryPartner() != null) {
                     log.info("Adding COD Collection Entry to Ledger");
                     walletService.addEntry(
@@ -235,7 +239,16 @@ public class OrderService {
             dispatchService.dispatchOrder(orderId);
         }
 
-        return orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+
+        // Notify WhatsApp
+        if (savedOrder.getStatus() == OrderStatus.PLACED) {
+            whatsAppService.sendOrderPlacedNotification(savedOrder);
+        } else if (savedOrder.getStatus() == OrderStatus.DELIVERED) {
+            whatsAppService.sendOrderDeliveredNotification(savedOrder.getUser().getPhone(), savedOrder.getId());
+        }
+
+        return savedOrder;
     }
 
     @Transactional
@@ -259,8 +272,17 @@ public class OrderService {
         }
     }
 
-    public List<Order> getMyOrders(String userId) {
-        return orderRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    public com.fooddelivery.dto.response.PagedResponse<Order> getMyOrders(String userId, int page, int size) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        org.springframework.data.domain.Page<Order> orderPage = orderRepository.findByUserIdOrderByCreatedAtDesc(userId,
+                pageable);
+
+        return new com.fooddelivery.dto.response.PagedResponse<>(
+                orderPage.getContent(),
+                orderPage.getNumber(),
+                orderPage.getSize(),
+                orderPage.getTotalElements(),
+                orderPage.getTotalPages());
     }
 
     public Order getOrder(String orderId) {

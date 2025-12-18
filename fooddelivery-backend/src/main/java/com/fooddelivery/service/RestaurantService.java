@@ -24,8 +24,17 @@ public class RestaurantService {
     private final UserRepository userRepository;
     private final com.fooddelivery.repository.OrderRepository orderRepository;
 
-    public List<Order> getOrders(String restaurantId) {
-        return orderRepository.findByRestaurantIdOrderByCreatedAtDesc(restaurantId);
+    public com.fooddelivery.dto.response.PagedResponse<Order> getOrders(String restaurantId, int page, int size) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        org.springframework.data.domain.Page<Order> orderPage = orderRepository
+                .findByRestaurantIdOrderByCreatedAtDesc(restaurantId, pageable);
+
+        return new com.fooddelivery.dto.response.PagedResponse<>(
+                orderPage.getContent(),
+                orderPage.getNumber(),
+                orderPage.getSize(),
+                orderPage.getTotalElements(),
+                orderPage.getTotalPages());
     }
 
     @Transactional

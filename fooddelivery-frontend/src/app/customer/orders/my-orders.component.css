@@ -1,187 +1,22 @@
-.container {
-    max-width: 800px;
-    margin: 2rem auto;
-    padding: 1rem;
-    min-height: 80vh;
-}
-
-.header {
-    margin-bottom: 2rem;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 1rem;
-}
-
-.header h1 {
-    font-size: 2rem;
-    color: #1f2937;
-    margin-bottom: 0.5rem;
-}
-
-.header p {
-    color: #6b7280;
-}
-
-.loading-state,
-.empty-state {
-    text-align: center;
-    padding: 4rem 2rem;
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-}
-
-.empty-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-}
-
-.orders-list {
+.pagination {
     display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-
-.order-card {
-    background: white;
-    border-radius: 16px;
-    padding: 1.5rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    border: 1px solid #f3f4f6;
-    transition: transform 0.2s;
-}
-
-.order-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-}
-
-.order-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px dashed #e5e7eb;
-}
-
-.restaurant-info h3 {
-    margin: 0;
-    color: #111827;
-    font-size: 1.1rem;
-}
-
-.date {
-    font-size: 0.85rem;
-    color: #6b7280;
-}
-
-.order-status {
-    padding: 0.25rem 0.75rem;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.status-PENDING {
-    background: #fff7ed;
-    color: #c2410c;
-}
-
-.status-CONFIRMED,
-.status-ACCEPTED {
-    background: #eff6ff;
-    color: #1d4ed8;
-}
-
-.status-COOKING {
-    background: #fdf4ff;
-    color: #86198f;
-}
-
-.status-READY_FOR_PICKUP {
-    background: #f0fdf4;
-    color: #15803d;
-}
-
-.status-OUT_FOR_DELIVERY {
-    background: #ecfccb;
-    color: #3f6212;
-}
-
-.status-DELIVERED {
-    background: #dcfce7;
-    color: #166534;
-}
-
-.status-CANCELLED {
-    background: #fef2f2;
-    color: #991b1b;
-}
-
-.order-items {
-    margin-bottom: 1rem;
-}
-
-.item {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-    font-size: 0.95rem;
-    color: #4b5563;
-}
-
-.quantity {
-    font-weight: 600;
-    margin-right: 0.5rem;
-    color: #1f2937;
-}
-
-.order-footer {
-    display: flex;
-    justify-content: space-between;
+    justify-content: center;
+    gap: 1rem;
     align-items: center;
-    padding-top: 1rem;
-    border-top: 1px solid #f3f4f6;
+    margin-top: 1rem;
+    padding: 1rem;
 }
 
-.total {
-    display: flex;
-    flex-direction: column;
-}
-
-.total span:first-child {
-    font-size: 0.8rem;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.total .amount {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #111827;
-}
-
-.btn-primary {
-    display: inline-block;
+.pagination button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
     background: #e23744;
     color: white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 500;
-    margin-top: 1rem;
-}
-
-.btn-text {
-    background: none;
-    border: none;
-    color: #e23744;
-    font-weight: 600;
     cursor: pointer;
 }
 
-.btn-text:hover {
-    text-decoration: underline;
+.pagination button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
 }

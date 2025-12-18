@@ -12,18 +12,25 @@ import { OrderService } from '../../core/services/order.service';
 })
 export class MyOrdersComponent implements OnInit {
   orderService = inject(OrderService);
-  
+
   orders = signal<any[]>([]);
   loading = signal(true);
+  page = signal(0);
+  size = signal(10);
+  totalElements = signal(0);
+  totalPages = signal(0);
 
   ngOnInit() {
     this.loadOrders();
   }
 
   loadOrders() {
-    this.orderService.getMyOrders().subscribe({
-      next: (data) => {
-        this.orders.set(data);
+    this.loading.set(true);
+    this.orderService.getMyOrders(this.page(), this.size()).subscribe({
+      next: (data: any) => {
+        this.orders.set(data.content);
+        this.totalElements.set(data.totalElements);
+        this.totalPages.set(data.totalPages);
         this.loading.set(false);
       },
       error: (err) => {
@@ -31,5 +38,19 @@ export class MyOrdersComponent implements OnInit {
         this.loading.set(false);
       }
     });
+  }
+
+  nextPage() {
+    if (this.page() < this.totalPages() - 1) {
+      this.page.update(p => p + 1);
+      this.loadOrders();
+    }
+  }
+
+  prevPage() {
+    if (this.page() > 0) {
+      this.page.update(p => p - 1);
+      this.loadOrders();
+    }
   }
 }

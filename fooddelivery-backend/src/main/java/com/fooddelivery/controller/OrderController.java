@@ -92,8 +92,12 @@ public class OrderController {
 
     @GetMapping("/my")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<List<Order>>> getMyOrders(@AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(ApiResponse.success("My Orders", orderService.getMyOrders(getUserId(userDetails))));
+    public ResponseEntity<ApiResponse<com.fooddelivery.dto.response.PagedResponse<Order>>> getMyOrders(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success("My Orders",
+                orderService.getMyOrders(getUserId(userDetails), page, size)));
     }
 
     @GetMapping("/{id}")

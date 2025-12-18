@@ -124,8 +124,10 @@ public class RestaurantController {
 
     @GetMapping("/{id}/orders")
     @PreAuthorize("hasRole('RESTAURANT_OWNER')")
-    public ResponseEntity<ApiResponse<List<com.fooddelivery.entity.Order>>> getRestaurantOrders(
-            @PathVariable String id) {
-        return ResponseEntity.ok(ApiResponse.success("Orders fetched", restaurantService.getOrders(id)));
+    public ResponseEntity<ApiResponse<com.fooddelivery.dto.response.PagedResponse<com.fooddelivery.entity.Order>>> getRestaurantOrders(
+            @PathVariable String id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success("Orders fetched", restaurantService.getOrders(id, page, size)));
     }
 }

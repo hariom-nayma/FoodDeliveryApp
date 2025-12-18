@@ -8,9 +8,11 @@ import java.util.List;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, String> {
-    List<Order> findByUserIdOrderByCreatedAtDesc(String userId);
+    org.springframework.data.domain.Page<Order> findByUserIdOrderByCreatedAtDesc(String userId,
+            org.springframework.data.domain.Pageable pageable);
 
-    List<Order> findByRestaurantIdOrderByCreatedAtDesc(String restaurantId);
+    org.springframework.data.domain.Page<Order> findByRestaurantIdOrderByCreatedAtDesc(String restaurantId,
+            org.springframework.data.domain.Pageable pageable);
 
     List<Order> findByUserIdAndStatusNotInOrderByCreatedAtDesc(String userId,
             java.util.Collection<com.fooddelivery.entity.OrderStatus> statuses);

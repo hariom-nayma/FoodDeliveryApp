@@ -21,7 +21,7 @@ import { OrderService } from '../../core/services/order.service';
                 <div class="order-header">
                     <span class="order-id">#{{ order.id.slice(0, 8) }}</span>
                     <span class="order-time">{{ order.createdAt | date:'mediumTime' }}</span>
-                    <span class="status-badge" [ngClass]="'status-' + order.status">{{ order.status }}</span>
+                    <span class="status-badge" [class]="'status-' + order.status">{{ order.status }}</span>
                 </div>
                 
                 <div class="order-items">
@@ -45,9 +45,15 @@ import { OrderService } from '../../core/services/order.service';
                         }
                     </div>
                 </div>
-                <!-- Show Rider Info if assigned -->
-                <!-- Fields might need to be populated in backend DTO, assuming order.deliveryPartner... -->
-                </div>
+            </div>
+
+            <!-- Pagination Controls -->
+             <div class="pagination">
+                <button (click)="prevPage()" [disabled]="page() === 0">Previous</button>
+                <span>Page {{ page() + 1 }} of {{ totalPages() }}</span>
+                <button (click)="nextPage()" [disabled]="page() >= totalPages() - 1">Next</button>
+             </div>
+
         } @else {
             <div class="empty-state">
                 <p>No active orders right now.</p>
@@ -75,6 +81,9 @@ import { OrderService } from '../../core/services/order.service';
     button { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: 500; }
     .btn-primary { background: #e23744; }
     .btn-success { background: #28a745; }
+    .pagination { display: flex; justify-content: center; gap: 1rem; align-items: center; margin-top: 1rem; }
+    .pagination button { background: #f0f0f0; color: #333; }
+    .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
   `]
 })
 export class RestaurantOrdersComponent implements OnInit {
@@ -84,6 +93,10 @@ export class RestaurantOrdersComponent implements OnInit {
     orders = signal<any[]>([]);
     loading = signal(true);
     restaurantId = '';
+    page = signal(0);
+    size = signal(10);
+    totalElements = signal(0);
+    totalPages = signal(0);
 
     ngOnInit() {
         // Access parent route params for restaurantId
@@ -98,13 +111,30 @@ export class RestaurantOrdersComponent implements OnInit {
     }
 
     loadOrders() {
-        this.orderService.getRestaurantOrders(this.restaurantId).subscribe({
-            next: (data) => {
-                this.orders.set(data);
+        this.loading.set(true);
+        this.orderService.getRestaurantOrders(this.restaurantId, this.page(), this.size()).subscribe({
+            next: (data: any) => {
+                this.orders.set(data.content);
+                this.totalElements.set(data.totalElements);
+                this.totalPages.set(data.totalPages);
                 this.loading.set(false);
             },
             error: () => this.loading.set(false)
         });
+    }
+
+    nextPage() {
+        if (this.page() < this.totalPages() - 1) {
+            this.page.update(p => p + 1);
+            this.loadOrders();
+        }
+    }
+
+    prevPage() {
+        if (this.page() > 0) {
+            this.page.update(p => p - 1);
+            this.loadOrders();
+        }
     }
 
     updateStatus(orderId: string, status: string) {
