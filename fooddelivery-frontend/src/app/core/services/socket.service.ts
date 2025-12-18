@@ -29,6 +29,14 @@ export class SocketService {
         return this.socket.fromEvent('order_escalated');
     }
 
+    joinRestaurantRoom(restaurantId: string) {
+        this.socket.emit('join_room', `restaurant_${restaurantId}`);
+    }
+
+    onNewOrder(): Observable<any> {
+        return this.socket.fromEvent('new_order');
+    }
+
     // Generic emit/listen
     emit(event: string, payload: any) {
         this.socket.emit(event, payload);

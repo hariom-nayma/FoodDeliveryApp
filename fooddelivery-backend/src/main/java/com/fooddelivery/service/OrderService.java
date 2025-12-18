@@ -37,6 +37,7 @@ public class OrderService {
     private final PaymentService paymentService;
     private final WalletService walletService;
     private final WhatsAppService whatsAppService;
+    private final com.corundumstudio.socketio.SocketIOServer socketIOServer;
 
     @Transactional
     public Order createOrder(String userId, CreateOrderRequest request) {
@@ -61,8 +62,18 @@ public class OrderService {
             return req;
         }).collect(Collectors.toList());
 
+        // Handle Null Restaurant in Cart (Data Recovery)
+        Restaurant restaurant = cart.getRestaurant();
+        if (restaurant == null) {
+            // Assume all items are from same restaurant (enforced by add to cart)
+            restaurant = cart.getItems().get(0).getMenuItem().getRestaurant();
+            // Self-heal
+            cart.setRestaurant(restaurant);
+            cartService.saveCart(cart);
+        }
+
         CalculatePriceRequest priceReq = new CalculatePriceRequest();
-        priceReq.setRestaurantId(cart.getRestaurant().getId());
+        priceReq.setRestaurantId(restaurant.getId());
         priceReq.setItems(itemRequests);
         priceReq.setDeliveryAddressId(request.getDeliveryAddressId());
         priceReq.setOfferCode(request.getOfferCode());
@@ -82,7 +93,7 @@ public class OrderService {
         // 2. Create Order
         Order order = Order.builder()
                 .user(cart.getUser())
-                .restaurant(cart.getRestaurant())
+                .restaurant(restaurant)
                 .status("COD".equalsIgnoreCase(request.getPaymentMethod()) ? OrderStatus.PLACED
                         : OrderStatus.PENDING_PAYMENT)
                 .paymentStatus(PaymentStatus.PENDING)
@@ -121,20 +132,48 @@ public class OrderService {
                     .name(cartItem.getMenuItem().getName())
                     .quantity(cartItem.getQuantity())
                     .basePrice(cartItem.getItemPrice())
-                    .totalPrice(cartItem.getTotalPrice()) // Note: Pricing service might have different total logic if
-                                                          // options changed price, but Cart should be sync. Use cart
-                                                          // snapshot.
+                    .totalPrice(cartItem.getTotalPrice())
                     .optionsJson(optionsJson)
                     .build();
         }).collect(Collectors.toList());
 
         orderItemRepository.saveAll(orderItems);
+        
+        // PREPARE PAYLOAD BEFORE CLEARING CART
+        java.util.List<java.util.Map<String, Object>> itemsPayload = cart.getItems().stream().map(i -> java.util.Map.of(
+                "name", i.getMenuItem().getName(),
+                "quantity", i.getQuantity(),
+                "options", i.getOptions().stream().map(CartItemOption::getOptionName).collect(Collectors.toList())
+        )).collect(Collectors.toList());
 
         // 4. Clear Cart
         cartService.clearCart(userId);
 
         // Notify WhatsApp
         whatsAppService.sendOrderPlacedNotification(saved);
+
+        // Notify Restaurant Owner (Socket.IO)
+        if (socketIOServer.getRoomOperations("restaurant_" + restaurant.getId()) != null) {
+            String addressLabel = "Delivery Location";
+            try {
+                if (saved.getDeliveryAddressJson() != null && saved.getDeliveryAddressJson().startsWith("{")) {
+                     com.fasterxml.jackson.databind.JsonNode node = objectMapper.readTree(saved.getDeliveryAddressJson());
+                     if (node.has("label")) addressLabel = node.get("label").asText();
+                }
+            } catch (Exception e) {}
+
+            // Build payload
+            java.util.Map<String, Object> payload = java.util.Map.of(
+                    "id", saved.getId(),
+                    "orderId", saved.getId(), 
+                    "customerName", saved.getUser().getName(),
+                    "deliveryAddress", addressLabel,
+                    "totalAmount", saved.getTotalAmount(),
+                    "items", itemsPayload,
+                    "createdAt", saved.getCreatedAt().toString());
+            socketIOServer.getRoomOperations("restaurant_" + restaurant.getId()).sendEvent("new_order", payload);
+            log.info("Sent new_order event to restaurant_{}", restaurant.getId());
+        }
 
         return saved;
     }

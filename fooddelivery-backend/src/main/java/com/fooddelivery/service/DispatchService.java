@@ -337,10 +337,7 @@ public class DispatchService {
     }
 
     public void releaseRiderLock(String riderId) {
-        // Warning: This is a "force unlock". Ideally we should use the token,
-        // but for delivery completion we assume we are the owner.
-        // Or we can store the token in the Order entity if we want to be strict.
-        // For now, force unlock is acceptable on delivery.
+        // Warning: This is a "force unlock". For force unlock is acceptable on delivery.
         redisService.unlock("rider_busy_" + riderId);
     }
 
@@ -404,10 +401,6 @@ public class DispatchService {
 
             // Unlock Rider immediately
             releaseRiderLock(assignment.getDeliveryPartner().getId());
-
-            // NOTE: We do NOT release dispatch guard or restart dispatch here.
-            // The existing flow (timeout/retry) manages the lifecycle.
-            // Releasing guard would risk parallel dispatch.
         }
     }
 }

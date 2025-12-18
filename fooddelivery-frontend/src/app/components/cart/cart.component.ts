@@ -52,9 +52,10 @@ export class CartComponent implements OnInit {
             items: cart.items.map(i => ({
                 itemId: i.itemId,
                 quantity: i.quantity,
-                options: i.options ? i.options.map((o: any) => ({ optionId: 'UNKNOWN' })) : [] 
-                // Note: CartItemResponse structure verification required for exact option mapping.
-                // If backend requires precise option IDs for price calc, they must be present in CartItemResponse.
+                options: i.options ? i.options.map((o: any) => ({ 
+                    groupId: o.groupId,
+                    optionId: o.optionId 
+                })) : []
             })),
             deliveryAddressId: addressId,
             userId: this.authService.currentUser()?.id

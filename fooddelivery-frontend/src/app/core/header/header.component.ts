@@ -5,6 +5,7 @@ import { AuthService } from '../auth/auth.service';
 import { CartService } from '../services/cart.service';
 import { AddAddressComponent } from '../../shared/components/add-address/add-address.component';
 import { AsyncPipe, CommonModule } from '@angular/common';
+import { DialogService } from '../services/dialog.service';
 
 @Component({
   selector: 'app-header',
@@ -17,6 +18,7 @@ export class HeaderComponent {
   authService = inject(AuthService);
   dialog = inject(MatDialog);
   cartService = inject(CartService);
+  private dialogService = inject(DialogService);
   showMenu = false;
 
   toggleMenu() {
@@ -41,5 +43,15 @@ export class HeaderComponent {
       width: '600px',
       maxWidth: '95vw'
     });
+  }
+
+  logout() {
+    this.dialogService.confirm('Are you sure you want to logout?', 'Logout Confirmation', 'Logout', 'Cancel')
+      .then(confirmed => {
+        if (confirmed) {
+          this.authService.logout();
+          this.dialogService.alert('Logged out successfully', 'Goodbye', 'success');
+        }
+      });
   }
 }

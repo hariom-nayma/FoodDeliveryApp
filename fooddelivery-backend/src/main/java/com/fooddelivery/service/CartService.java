@@ -38,6 +38,10 @@ public class CartService {
         return getOrCreateCart(userId);
     }
 
+    public void saveCart(Cart cart) {
+        cartRepository.save(cart);
+    }
+
     @Transactional
     public CartResponse addToCart(String userId, AddToCartRequest request) {
         Cart cart = getOrCreateCart(userId);
@@ -72,13 +76,13 @@ public class CartService {
                     .quantity(request.getQuantity())
                     .itemPrice(item.getBasePrice())
                     .build();
-            
+
             // Add options
             if (request.getOptions() != null) {
                 for (CartOptionRequest optReq : request.getOptions()) {
                     MenuItemOption option = menuItemOptionRepository.findById(optReq.getOptionId())
                             .orElseThrow(() -> new RuntimeException("Option not found: " + optReq.getOptionId()));
-                    
+
                     CartItemOption cartOption = CartItemOption.builder()
                             .optionGroupId(optReq.getGroupId()) // Or option.getOptionGroup().getId()
                             .optionGroupName(option.getOptionGroup().getName())
@@ -107,8 +111,9 @@ public class CartService {
 
         if (request.getQuantity() != null) {
             if (request.getQuantity() <= 0) {
-                // Remove logic if qty 0? Spec says "DELETE /cart/item" is separate. 
-                // But typically qty 0 means remove. Let's assume validation prevents <=0 or we remove.
+                // Remove logic if qty 0? Spec says "DELETE /cart/item" is separate.
+                // But typically qty 0 means remove. Let's assume validation prevents <=0 or we
+                // remove.
                 // Spec says "Quantity <=0 BAD_REQUEST", so we throw.
                 throw new RuntimeException("Quantity must be > 0");
             }
@@ -116,16 +121,16 @@ public class CartService {
         }
 
         // Updating options is complex (re-creating list), spec allows it.
-        // For now, let's assume update is mostly Qty. 
+        // For now, let's assume update is mostly Qty.
         // If options provided, we replace.
         if (request.getOptions() != null) {
-             // Clear existing options
-             item.getOptions().clear();
-             // Add new
-             for (CartOptionRequest optReq : request.getOptions()) {
+            // Clear existing options
+            item.getOptions().clear();
+            // Add new
+            for (CartOptionRequest optReq : request.getOptions()) {
                 MenuItemOption option = menuItemOptionRepository.findById(optReq.getOptionId())
                         .orElseThrow(() -> new RuntimeException("Option not found"));
-                
+
                 CartItemOption cartOption = CartItemOption.builder()
                         .optionGroupId(optReq.getGroupId())
                         .optionGroupName(option.getOptionGroup().getName())
@@ -152,12 +157,12 @@ public class CartService {
 
         cart.getItems().remove(item);
         cartItemRepository.delete(item);
-        
+
         // If empty, clear restaurant?
         if (cart.getItems().isEmpty()) {
             cart.setRestaurant(null);
         }
-        
+
         return mapToResponse(cartRepository.save(cart));
     }
 
@@ -184,9 +189,9 @@ public class CartService {
         // Simple logic: Check if itemId matches AND option IDs match exactly.
         // Requested Options: List of {groupId, optionId}
         // Existing Options: List of CartItemOption {optionId...}
-        
-        List<String> reqOptionIds = requestedOptions == null ? new ArrayList<>() : 
-            requestedOptions.stream().map(CartOptionRequest::getOptionId).sorted().collect(Collectors.toList());
+
+        List<String> reqOptionIds = requestedOptions == null ? new ArrayList<>()
+                : requestedOptions.stream().map(CartOptionRequest::getOptionId).sorted().collect(Collectors.toList());
 
         return cart.getItems().stream()
                 .filter(ci -> ci.getMenuItem().getId().equals(itemId))
@@ -202,8 +207,8 @@ public class CartService {
         double base = item.getMenuItem().getBasePrice(); // Or item.getItemPrice() (snapshot)
         // Let's use current menu price or snapshot? Usually snapshot.
         // But if I use base from entity, I should update snapshot.
-        item.setItemPrice(item.getMenuItem().getBasePrice()); 
-        
+        item.setItemPrice(item.getMenuItem().getBasePrice());
+
         double optionsTotal = item.getOptions().stream().mapToDouble(CartItemOption::getPrice).sum();
         item.setTotalPrice((base + optionsTotal) * item.getQuantity());
     }
@@ -214,24 +219,22 @@ public class CartService {
         double deliveryFee = subtotal > 0 ? 40.0 : 0.0; // Flat 40 if not empty
         double total = subtotal + tax + deliveryFee;
 
-        List<CartItemResponse> items = cart.getItems().stream().map(i -> 
-            CartItemResponse.builder()
-                    .cartItemId(i.getId())
-                    .itemId(i.getMenuItem().getId())
-                    .name(i.getMenuItem().getName())
-                    .quantity(i.getQuantity())
-                    .basePrice(i.getItemPrice())
-                    .finalPrice(i.getTotalPrice())
-                    .imageUrl(i.getMenuItem().getImageUrl())
-                    .options(i.getOptions().stream().map(o -> 
-                        CartOptionResponse.builder()
-                                .groupName(o.getOptionGroupName())
-                                .optionSelected(o.getOptionName())
-                                .extraPrice(o.getPrice())
-                                .build()
-                    ).collect(Collectors.toList()))
-                    .build()
-        ).collect(Collectors.toList());
+        List<CartItemResponse> items = cart.getItems().stream().map(i -> CartItemResponse.builder()
+                .cartItemId(i.getId())
+                .itemId(i.getMenuItem().getId())
+                .name(i.getMenuItem().getName())
+                .quantity(i.getQuantity())
+                .basePrice(i.getItemPrice())
+                .finalPrice(i.getTotalPrice())
+                .imageUrl(i.getMenuItem().getImageUrl())
+                .options(i.getOptions().stream().map(o -> CartOptionResponse.builder()
+                        .groupId(o.getOptionGroupId())
+                        .groupName(o.getOptionGroupName())
+                        .optionId(o.getOptionId())
+                        .optionSelected(o.getOptionName())
+                        .extraPrice(o.getPrice())
+                        .build()).collect(Collectors.toList()))
+                .build()).collect(Collectors.toList());
 
         return CartResponse.builder()
                 .cartId(cart.getId())

@@ -3,6 +3,7 @@ import { MenuService, Category, MenuItem } from './menu.service';
 import { ActivatedRoute } from '@angular/router';
 import { AddCategoryDialogComponent } from './add-category-dialog.component';
 import { AddMenuItemDialogComponent } from './add-menu-item-dialog.component';
+import { DialogService } from '../../core/services/dialog.service';
 
 @Component({
     selector: 'app-menu-management',
@@ -126,6 +127,7 @@ import { AddMenuItemDialogComponent } from './add-menu-item-dialog.component';
 export class MenuManagementComponent implements OnInit {
     private menuService = inject(MenuService);
     private route = inject(ActivatedRoute);
+    private dialogService = inject(DialogService);
 
     activeTab = signal('categories');
     categories = signal<Category[]>([]);
@@ -159,9 +161,11 @@ export class MenuManagementComponent implements OnInit {
             next: (res) => {
                 if (res.success) {
                     this.loadData();
+                    this.showCategoryDialog.set(false);
+                    this.dialogService.alert('Category created successfully', 'Success', 'success');
                 }
             },
-            error: (err) => alert('Failed to create category')
+            error: (err) => this.dialogService.alert('Failed to create category', 'Error', 'error')
         });
     }
 
@@ -188,10 +192,11 @@ export class MenuManagementComponent implements OnInit {
                 if (res.success) {
                     // Optimistic update or reload
                     this.loadData();
+                    this.dialogService.alert('Item availability updated', 'Success', 'success');
                 }
             },
             error: (err) => {
-                alert('Failed to update availability');
+                this.dialogService.alert('Failed to update availability', 'Error', 'error');
                 console.error(err);
             }
         });
@@ -208,9 +213,10 @@ export class MenuManagementComponent implements OnInit {
                     this.loadData();
                     this.showItemDialog.set(false);
                     this.selectedItem.set(null);
+                    this.dialogService.alert('Menu item saved successfully', 'Success', 'success');
                 }
             },
-            error: (err) => alert('Failed to save item: ' + (err.error?.message || err.message))
+            error: (err) => this.dialogService.alert('Failed to save item', 'Error', 'error')
         });
     }
 }

@@ -5,6 +5,7 @@ import { Category, MenuItem, Restaurant, Option } from '../core/restaurant/resta
 import { CartService } from '../core/services/cart.service';
 import { RouterLink } from '@angular/router';
 import { CustomizeItemDialogComponent } from './components/customize-item-dialog.component';
+import { DialogService } from '../core/services/dialog.service';
 
 @Component({
   selector: 'app-restaurant-detail',
@@ -16,6 +17,7 @@ import { CustomizeItemDialogComponent } from './components/customize-item-dialog
 export class RestaurantDetailComponent implements OnInit {
   private restaurantService = inject(RestaurantService);
   cartService = inject(CartService);
+  private dialogService = inject(DialogService);
 
   @Input() id!: string;
 
@@ -72,12 +74,11 @@ export class RestaurantDetailComponent implements OnInit {
       }))
     }).subscribe({
       next: () => {
-        // Optional: Toast or subtle animation
-        console.log('Added to cart');
+        this.dialogService.alert(`Added ${item.name} to cart!`, 'Success', 'success');
       },
       error: (err) => {
         console.error(err);
-        alert('Failed to add to cart');
+        this.dialogService.alert('Failed to add to cart', 'Error', 'error');
       }
     });
   }

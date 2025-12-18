@@ -4,7 +4,9 @@ import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface CartOptionResponse {
+    groupId: string;
     groupName: string;
+    optionId: string;
     optionSelected: string;
     extraPrice: number;
 }

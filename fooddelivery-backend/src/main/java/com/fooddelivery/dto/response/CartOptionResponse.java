@@ -6,7 +6,9 @@ import lombok.Data;
 @Data
 @Builder
 public class CartOptionResponse {
+    private String groupId;
     private String groupName;
+    private String optionId;
     private String optionSelected;
     private Double extraPrice;
 }

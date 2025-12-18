@@ -5,17 +5,19 @@ import { FooterComponent } from './core/footer/footer.component';
 import { ActiveOrderOverlayComponent } from './components/order/active-order-overlay.component';
 import { AuthService } from './core/auth/auth.service';
 import { SocketService } from './core/services/socket.service';
+import { GlobalDialogComponent } from './core/components/global-dialog/global-dialog.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, HeaderComponent, FooterComponent, ActiveOrderOverlayComponent],
+  imports: [RouterOutlet, HeaderComponent, FooterComponent, ActiveOrderOverlayComponent, GlobalDialogComponent],
   template: `
     <app-header></app-header>
     <main style="min-height: 80vh;">
       <router-outlet></router-outlet>
     </main>
     <app-active-order-overlay></app-active-order-overlay>
+    <app-global-dialog></app-global-dialog>
     <app-footer></app-footer>
   `,
   styles: []

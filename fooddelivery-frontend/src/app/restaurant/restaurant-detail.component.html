@@ -47,8 +47,11 @@
                         <p class="item-desc">{{ item.description }}</p>
                     </div>
                     <div class="item-action-container">
-                        <!-- TODO: Add image here if available -->
-                        <button class="add-btn" (click)="addToCart(item)">ADD</button>
+                        <div class="item-img-wrapper">
+                            <img [src]="item.imageUrl || 'assets/placeholder-food.jpg'" [alt]="item.name"
+                                (error)="$event.target.src='assets/placeholder-food.jpg'">
+                            <button class="add-btn" (click)="addToCart(item)">ADD</button>
+                        </div>
                     </div>
                 </div>
                 }
